@@ -1,80 +1,56 @@
+import os
+from os import listdir
+from os.path import isfile, join
+from subprocess import Popen, PIPE
+import re
+
 from kivy.app import App
 from kivy.uix.widget import Widget
 from kivy.core.window import Window
 from kivy.uix.button import Button
 from kivy.graphics import Color, Ellipse
 from kivy.clock import Clock
+from kivy.uix.dropdown import DropDown
 
-import os, sys, inspect
 # import leap motion (unfortunately there is no pip package for installing)
-src_dir = os.path.dirname(inspect.getfile(inspect.currentframe()))
-arch_dir = './lib/x64' if sys.maxsize > 2**32 else './lib/x86'
-sys.path.insert(0, os.path.abspath(os.path.join(src_dir, arch_dir)))
+# src_dir = os.path.dirname(inspect.getfile(inspect.currentframe()))
+# arch_dir = './lib/x64' if sys.maxsize > 2**32 else './lib/x86'
+# sys.path.insert(0, os.path.abspath(os.path.join(src_dir, arch_dir)))
 
 import Leap
+import numpy as np
+import mido
 
 from midi_thread import MidiThread
-# from thread_test import select_port, select_midi
-import numpy as np
-
-from kivy.uix.dropdown import DropDown
-from subprocess import Popen, PIPE
-import re
-from os import listdir
-from os.path import isfile, join
-
 
 
 def select_port():
-    p = Popen(['aplaymidi', '-l'], stdin=PIPE, stdout=PIPE, stderr=PIPE)
-    output, err = p.communicate(b"input data that is passed to subprocess' stdin")
+    midi_ports = mido.get_output_names()
 
-    output = output.split('\n')[1:]
+    for cur_idx, cur_port in enumerate(midi_ports):
+        print('{} \t {}'.format(cur_idx, cur_port))
 
-    port_dict = {}
-
-    print('Nr \t Port')
-    for i, elem in enumerate(output):
-
-        split = re.split(r'\s{2,}', elem)
-
-        if len(split) > 1:
-            port_dict[i] = split
-
-            print('{} \t {}'.format(i, split[1]))
-
-    port_nr = input('Select Port: ')
+    port_nr = int(input('Select Port: '))
     print('\n')
 
-    return port_dict[port_nr][-1]
+    return port_nr, midi_ports[port_nr]
 
 
 def select_midi(midi_path='./midi/'):
-
+    # get available MIDIs
     midi_files = [f for f in listdir(midi_path) if isfile(join(midi_path, f))]
 
-    file_dict = {}
+    files = []
 
     print('Nr \t File')
     for i, file in enumerate(midi_files):
-        file_dict[i] = join(midi_path, file)
-
+        files.append(join(midi_path, file))
         print('{} \t {}'.format(i, file))
 
-    file_nr = input('Select Midi: ')
-    return file_dict[file_nr]
+    file_nr = int(input('Select Midi: '))
 
-# def select_midi():
-#
-#     midi_path = '../midi/'
-#     midi_files = [f for f in listdir(midi_path) if isfile(join(midi_path, f))]
-#
-#     files = {}
-#
-#     for i, file in enumerate(midi_files):
-#         files[i] = join(midi_path, file)
-#
-#     return files
+    return files[file_nr]
+
 
 class MyPaintWidget(Widget):
 
@@ -88,7 +64,6 @@ class MyPaintWidget(Widget):
 
         self.th = th
         self.size = Window.size
-
 
 
     def update(self, *args):
@@ -126,7 +101,6 @@ class MyPaintWidget(Widget):
                 pos[1] = y_lim[0]
             elif pos[1] > y_lim[1]:
                 pos[1] = y_lim[1]
-
 
             vel = sum(velocity < pos[1])
 
@@ -177,10 +151,10 @@ class MyPaintApp(App):
         #
         #
         # parent.add_widget(mainbutton)
-        selected_port = select_port()
-        #
+        selected_port, selected_port_name = select_port()
         midi_file = select_midi()
-        th = MidiThread(midi_file, selected_port)
+
+        th = MidiThread(midi_file, selected_port_name)
 
         self.painter = MyPaintWidget(th)
         parent.add_widget(self.painter)
