@@ -1,0 +1,14 @@
+name: leapcontrol
+
+channels:
+  - defaults
+  - speleo3
+
+dependencies:
+  - python=3.6
+  - numpy
+  - leap-motion-python
+
+  - pip:
+    - mido
+    - python-rtmidi
