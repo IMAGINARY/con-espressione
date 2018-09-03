@@ -56,7 +56,7 @@ class MyPaintWidget(Widget):
         self.y_lim = [100, 400]
 
         # history of positions
-        self.positions = [(0.5, 0.5), ]
+        self.positions = [(0.5, 0.5), ]  # initial position
         self.max_len_pos = 40
         self.smoothing_factor = 0.3
 
@@ -186,5 +186,5 @@ class MyPaintApp(App):
 
 
 if __name__ == '__main__':
-    # Window.fullscreen = True
+    Window.fullscreen = True
     MyPaintApp().run()
