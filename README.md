@@ -2,10 +2,13 @@
 
 ## Setup
 
-### Mac OS X
+```
+    conda env create -f environment.yml
+```
 
-Install LeapMotion SDK (using homebrew)
+## Run
 
 ```
-    brew cask install leap-motion
+    source activate leapcontrol
+    python gui.py
 ```
