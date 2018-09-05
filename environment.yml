@@ -3,11 +3,13 @@ name: leapcontrol
 channels:
   - defaults
   - speleo3
+  - conda-forge
 
 dependencies:
   - python=3.6
   - numpy
   - leap-motion-python
+  - kivy
 
   - pip:
     - mido

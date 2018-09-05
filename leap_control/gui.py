@@ -1,20 +1,17 @@
 import os
-from os import listdir
-from os.path import isfile, join
 
 from kivy.app import App
 from kivy.uix.widget import Widget
 from kivy.core.window import Window
-from kivy.uix.button import Button
 from kivy.graphics import Color, Ellipse
 from kivy.clock import Clock
 from kivy.uix.dropdown import DropDown
+from kivy.uix.button import Button
 
-import Leap
-import numpy as np
 import mido
 
 from midi_thread import MidiThread
+import controller
 
 
 def select_port():
@@ -31,13 +28,13 @@ def select_port():
 
 def select_midi(midi_path='./midi/'):
     # get available MIDIs
-    midi_files = [f for f in listdir(midi_path) if isfile(join(midi_path, f))]
+    midi_files = [f for f in os.listdir(midi_path) if os.path.isfile(os.path.join(midi_path, f))]
 
     files = []
 
     print('Nr \t File')
     for i, file in enumerate(midi_files):
-        files.append(join(midi_path, file))
+        files.append(os.path.join(midi_path, file))
         print('{} \t {}'.format(i, file))
 
     file_nr = int(input('Select Midi: '))
@@ -47,13 +44,10 @@ def select_midi(midi_path='./midi/'):
 
 class MyPaintWidget(Widget):
 
-    def __init__(self, th):
+    def __init__(self, th, controller):
         super(MyPaintWidget, self).__init__()
 
-        self.controller = Leap.Controller()
-        # controller's coordinate system
-        self.x_lim = [-200, 200]
-        self.y_lim = [100, 400]
+        self.controller = controller
 
         # history of positions
         self.positions = [(0.5, 0.5), ]  # initial position
@@ -69,35 +63,32 @@ class MyPaintWidget(Widget):
         self.th = th
         self.size = Window.size
 
+        self.positions_hist = []
+
     def update(self, *args):
-        # get current frame
-        frame = self.controller.frame()
+        # limit list of positions to max_len_pos
+        self.positions = self.positions[:self.max_len_pos]
 
-        # only access hand if one is available
-        if len(frame.hands) > 0:
-            # limit list of positions to max_len_pos
-            self.positions = self.positions[:self.max_len_pos]
+        # get postion and smooth
+        pos = self.controller.get_pos(smoothing_factor=self.smoothing_factor)
 
-            # get the first hand
-            hand = frame.hands[0]
+        if pos is None:
+            pos = self.positions[0]
 
-            # get postion and smooth
-            pos = self.get_pos(hand)
-            pos = self.smooth(pos)
+        # map position to tempo-factor and velocity
+        cur_tempo_factor = -(self.tf_max - self.tf_min) * pos[0] + 2.0
+        cur_velocity = (self.vel_max - self.vel_min) * pos[1] + self.vel_min
 
-            # map position to tempo-factor and velocity
-            cur_tempo_factor = -(self.tf_max - self.tf_min) * pos[0] + 2.0
-            cur_velocity = (self.vel_max - self.vel_min) * pos[1] + self.vel_min
+        # set the MIDI playback accordingly
+        self.th.set_tempo(cur_tempo_factor)
+        self.th.set_velocity(int(cur_velocity))
 
-            # set the MIDI playback accordingly
-            self.th.set_tempo(cur_tempo_factor)
-            self.th.set_velocity(int(cur_velocity))
+        # store current position at the beginning of the list
+        self.positions.insert(0, pos)
+        self.positions_hist.append(pos)
 
-            # store current position at the beginning of the list
-            self.positions.insert(0, pos)
-
-            # draw worm as red trajectory
-            self.draw_worm((1, 0, 0))
+        # draw worm as red trajectory
+        self.draw_worm((1, 0, 0))
 
     def draw_worm(self, color):
         """Draw worm trajectory."""
@@ -117,33 +108,6 @@ class MyPaintWidget(Widget):
 
                 # draw circle
                 Ellipse(pos=(p[0] * self.size[0], p[1] * self.size[1]), size=(size, size))
-
-    def get_pos(self, hand):
-        """Get hand position from LeapMotion"""
-
-        # extract palm position (0 ... x-axis, 1 ... y-axis, 2 ... z-axis)
-        pos = [hand.palm_position[0], hand.palm_position[1]]
-
-        # set position limits
-        pos[0] = max(pos[0], self.x_lim[0])
-        pos[0] = min(pos[0], self.x_lim[1])
-
-        pos[1] = max(pos[1], self.y_lim[0])
-        pos[1] = min(pos[1], self.y_lim[1])
-
-        # project sensor data to [0, 1]
-        pos[0] = pos[0] / 400.0 + 0.5  # x
-        pos[1] = pos[1] / 300.0 - 1./3  # y
-
-        return pos
-
-    def smooth(self, pos):
-        """Smooth hand trajectory with exponential moving average filter."""
-
-        pos[0] = self.smoothing_factor * pos[0] + (1 - self.smoothing_factor) * self.positions[0][0]
-        pos[1] = self.smoothing_factor * pos[1] + (1 - self.smoothing_factor) * self.positions[0][1]
-
-        return pos
 
 
 class MyPaintApp(App):
@@ -171,9 +135,18 @@ class MyPaintApp(App):
         selected_port, selected_port_name = select_port()
         midi_file = select_midi()
 
+        # check if leap motion tracker is available
+        # if Leap.Device().is_valid:
+        #     my_controller = controller.LeapMotion()
+        # else:
+        #     # use mouse fallback
+        #     my_controller = controller.Mouse()
+
+        my_controller = controller.LeapMotion()
+
         th = MidiThread(midi_file, selected_port_name)
 
-        self.painter = MyPaintWidget(th)
+        self.painter = MyPaintWidget(th, my_controller)
         parent.add_widget(self.painter)
 
         Clock.schedule_interval(self.painter.update, 0.05)
@@ -186,5 +159,5 @@ class MyPaintApp(App):
 
 
 if __name__ == '__main__':
-    Window.fullscreen = True
+    # Window.fullscreen = True
     MyPaintApp().run()
