@@ -57,7 +57,7 @@ class MyPaintWidget(Widget):
         # configure tempo factor and velocity range
         self.tf_min = 0.5
         self.tf_max = 2.0
-        self.vel_min = 0
+        self.vel_min = 10
         self.vel_max = 128
 
         self.th = th
@@ -112,6 +112,11 @@ class MyPaintWidget(Widget):
 
 class MyPaintApp(App):
 
+    def __init__(self, my_controller):
+        App.__init__(self)
+
+        self.my_controller = my_controller
+
     def build(self):
         parent = Widget()
 
@@ -132,21 +137,8 @@ class MyPaintApp(App):
         #
         #
         # parent.add_widget(mainbutton)
-        selected_port, selected_port_name = select_port()
-        midi_file = select_midi()
 
-        # check if leap motion tracker is available
-        # if Leap.Device().is_valid:
-        #     my_controller = controller.LeapMotion()
-        # else:
-        #     # use mouse fallback
-        #     my_controller = controller.Mouse()
-
-        my_controller = controller.LeapMotion()
-
-        th = MidiThread(midi_file, selected_port_name)
-
-        self.painter = MyPaintWidget(th, my_controller)
+        self.painter = MyPaintWidget(th, self.my_controller)
         parent.add_widget(self.painter)
 
         Clock.schedule_interval(self.painter.update, 0.05)
@@ -159,5 +151,16 @@ class MyPaintApp(App):
 
 
 if __name__ == '__main__':
-    # Window.fullscreen = True
-    MyPaintApp().run()
+    selected_port, selected_port_name = select_port()
+    midi_file = select_midi()
+    th = MidiThread(midi_file, selected_port_name)
+    use_lm = int(input('Use LeapMotion? (type 1): '))
+
+    if use_lm == 1:
+        # check if leap motion tracker is available
+        my_controller = controller.LeapMotion()
+    else:
+        # use mouse fallback
+        my_controller = controller.Mouse()
+
+    MyPaintApp(my_controller).run()
