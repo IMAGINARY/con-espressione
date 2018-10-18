@@ -5,6 +5,7 @@ TODO
 ----
 * Move decoding procedure to basismixer.performance_codec to make
 BasisMixerMidiThread more modular.
+* Add melody lead.
 """
 import threading
 import time
@@ -45,13 +46,14 @@ class MidiThread(threading.Thread):
 
 class BasisMixerMidiThread(threading.Thread):
     def __init__(self, bm_precomputed_path, midi_port,
-                 vel_min=30, vel_max=110):
+                 vel_min=30, vel_max=110, deadpan=False):
         threading.Thread.__init__(self)
         self.midi_port = midi_port
         self.vel = 64
         self.tempo = 1
         # Construct score-performance dictionary
-        self.score_dict = load_bm_preds(bm_precomputed_path)
+        self.score_dict = load_bm_preds(bm_precomputed_path,
+                                        deadpan=deadpan)
 
         # Minimal and Maximal MIDI velocities allowed for each note
         self.vel_min = vel_min
@@ -117,7 +119,7 @@ class BasisMixerMidiThread(threading.Thread):
                 perf_duration = ((2 ** lart) * bpr_a * dur)[perf_onset_idx]
 
                 # Compute performed MIDI velocity for each note (and sort them)
-                perf_vel = np.clip(np.round((vt * vel_a - vd * 64)),
+                perf_vel = np.clip(np.round((vt * vel_a - vd)),
                                    self.vel_min,
                                    self.vel_max).astype(np.int)[perf_onset_idx]
 
@@ -173,5 +175,4 @@ class BasisMixerMidiThread(threading.Thread):
                 current_time = time.time() - init_time
                 if current_time >= off_messages[0].time:
                     outport.send(off_messages[0])
-                    print(off_messages[0])
                     del off_messages[0]

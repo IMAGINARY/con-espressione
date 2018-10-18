@@ -4,14 +4,16 @@ from the Basis Mixer.
 
 TODO
 ----
-* Move all decoding methods here (from ?
+* Move all decoding methods here
+* Add pre-processing of parameters
 * Use only mido for generating dummy bm files from midi (remove dependencies
 from madmom)
+* Add melody lead
 """
 import numpy as np
 
 
-def load_bm_preds(filename):
+def load_bm_preds(filename, deadpan=False):
     """Loads precomputed predictions of the Basis Mixer.
 
     Parameters
@@ -28,6 +30,11 @@ def load_bm_preds(filename):
         (0:Pitches, 1:score ioi, 2:durations, 3:vel_trend
          4:vel_dev, 5:log_bpr, 6:timing, 7:log_art,
          8:melody)
+
+    TODO
+    ----
+    * Preprocess parameters here?
+    * Expand grace notes
     """
     # Load predictions file
     bm_data = np.loadtxt(filename)
@@ -40,12 +47,21 @@ def load_bm_preds(filename):
     # Onsets start at 0
     onsets -= onsets.min()
 
-    # Performance information (expressive parameters)
-    vel_trend = bm_data[:, 3]
-    vel_dev = bm_data[:, 4]
-    log_bpr = bm_data[:, 5]
-    timing = bm_data[:, 6]
-    log_art = bm_data[:, 7]
+    if not deadpan:
+        # Performance information (expressive parameters)
+        vel_trend = bm_data[:, 3] / bm_data[:, 3].mean()
+        vel_dev = bm_data[:, 4]
+        log_bpr = bm_data[:, 5]
+        timing = bm_data[:, 6]
+        log_art = bm_data[:, 7]
+    else:
+        # Expressive parameters corresponding to a deadpan performance
+        n_notes = len(pitches)
+        vel_trend = np.ones(n_notes)
+        vel_dev = np.zeros(n_notes)
+        log_bpr = np.zeros(n_notes)
+        timing = np.zeros(n_notes)
+        log_art = np.zeros(n_notes)
 
     return _build_score_dict(pitches, onsets, durations, melody,
                              vel_trend, vel_dev, log_bpr,

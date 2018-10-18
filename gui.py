@@ -175,8 +175,15 @@ if __name__ == '__main__':
 
     elif demo_type == 1:
         print('Using BM file as input')
+        deadpan = int(input('Deadpan performance (type 1)?: '))
+
+        if deadpan == 1:
+            deadpan = True
+        else:
+            deadpan = False
         bm_file = select_file(file_path='./bm_files', file_type='BM file')
-        th = BasisMixerMidiThread(bm_file, selected_port_name)
+        th = BasisMixerMidiThread(bm_file, selected_port_name,
+                                  deadpan=deadpan)
 
     use_lm = int(input('Use LeapMotion? (type 1): '))
 
