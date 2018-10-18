@@ -1,3 +1,14 @@
+"""
+Run the GUI demo
+
+TODO
+----
+
+* Add external controller (PowerMate)
+* Add config file for pre-processing BM performance?
+* Improve user interface for setting up the demo 
+  (add a proper before the worm visualization?)
+"""
 import os
 
 from kivy.app import App
@@ -10,7 +21,7 @@ from kivy.uix.button import Button
 
 import mido
 
-from midi_thread import MidiThread
+from midi_thread import MidiThread, BasisMixerMidiThread
 import controller
 
 
@@ -26,18 +37,19 @@ def select_port():
     return port_nr, midi_ports[port_nr]
 
 
-def select_midi(midi_path='./midi/'):
+def select_file(file_path='./midi/', file_type='Midi'):
     # get available MIDIs
-    midi_files = [f for f in os.listdir(midi_path) if os.path.isfile(os.path.join(midi_path, f))]
+    midi_files = [f for f in os.listdir(
+        file_path) if os.path.isfile(os.path.join(file_path, f))]
 
     files = []
 
     print('Nr \t File')
     for i, file in enumerate(midi_files):
-        files.append(os.path.join(midi_path, file))
+        files.append(os.path.join(file_path, file))
         print('{} \t {}'.format(i, file))
 
-    file_nr = int(input('Select Midi: '))
+    file_nr = int(input('Select {0}: '.format(file_type)))
 
     return files[file_nr]
 
@@ -107,7 +119,8 @@ class MyPaintWidget(Widget):
                 size = d - (d / self.max_len_pos) * i
 
                 # draw circle
-                Ellipse(pos=(p[0] * self.size[0], p[1] * self.size[1]), size=(size, size))
+                Ellipse(pos=(p[0] * self.size[0], p[1] *
+                             self.size[1]), size=(size, size))
 
 
 class MyPaintApp(App):
@@ -121,7 +134,7 @@ class MyPaintApp(App):
         parent = Widget()
 
         # dropdown = DropDown()
-        # midi_files = select_midi()
+        # midi_files = select_file()
         # # for index in range(len(MIDIFILES)):
         # for index in midi_files.keys():
         #
@@ -152,8 +165,19 @@ class MyPaintApp(App):
 
 if __name__ == '__main__':
     selected_port, selected_port_name = select_port()
-    midi_file = select_midi()
-    th = MidiThread(midi_file, selected_port_name)
+
+    demo_type = int(input('Use MIDI (type 0) or BM (type 1) file as input?: '))
+
+    if demo_type == 0:
+        print('Using MIDI file as input')
+        midi_file = select_file()
+        th = MidiThread(midi_file, selected_port_name)
+
+    elif demo_type == 1:
+        print('Using BM file as input')
+        bm_file = select_file(file_path='./bm_files', file_type='BM file')
+        th = BasisMixerMidiThread(bm_file, selected_port_name)
+
     use_lm = int(input('Use LeapMotion? (type 1): '))
 
     if use_lm == 1:
