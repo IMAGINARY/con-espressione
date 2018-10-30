@@ -75,8 +75,8 @@ class LeapMotion(Controller):
             pos = self.limit_pos(pos)
 
             # project sensor data to [0, 1]
-            pos[0] = pos[0] / 400.0 + 0.5  # x
-            pos[1] = pos[1] / 300.0 - 1./3  # y
+            pos[0] = max(0, min(pos[0] / 400.0 + 0.5, 1))  # x
+            pos[1] = max(0, min(pos[1] / 300.0 - 1./3, 1))  # y
 
             if smoothing_factor != 1.0:
                 self.smooth(pos, self.last_pos, smoothing_factor)
