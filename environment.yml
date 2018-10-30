@@ -10,6 +10,7 @@ dependencies:
   - numpy
   - leap-motion-python
   - kivy
+  - cython
 
   - pip:
     - mido
