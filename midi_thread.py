@@ -22,11 +22,11 @@ class MidiThread(threading.Thread):
         threading.Thread.__init__(self)
         self.midi = midi_path
         self.midi_port = midi_port
-        self.vel = None
+        self.vel_factor = 1
         self.tempo = 1
 
-    def set_velocity(self, vel):
-        self.vel = vel
+    def set_velocity(self, vel_factor):
+        self.vel_factor = vel_factor
 
     def set_tempo(self, tempo):
         self.tempo = tempo
@@ -36,8 +36,10 @@ class MidiThread(threading.Thread):
             for msg in mido.MidiFile(self.midi):
                 play_msg = msg
                 if msg.type == 'note_on':
-                    if msg.velocity != 0 and self.vel is not None:
-                        play_msg = msg.copy(velocity=self.vel)
+                    if msg.velocity != 0:
+                        new_vel = int(min(msg.velocity*self.vel_factor, 127))
+
+                        play_msg = msg.copy(velocity=new_vel)
 
                 time.sleep(play_msg.time*self.tempo)
 
