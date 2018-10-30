@@ -149,11 +149,14 @@ class WormWidget(Widget):
 
 
 class LeapControl(App):
-    def __init__(self, my_controller):
+    def __init__(self, worm_controller,
+                 midi_port, fn_midi):
         App.__init__(self)
-        self.my_controller = my_controller
-        self.midi_thread = MidiThread(midi_file, selected_port_name)
-        self.midi_thread.daemon = True
+        self.worm_controller = worm_controller
+        self.playback_thread = None
+        self.midi_port = midi_port
+        self.fn_midi = fn_midi
+        self.fn_video = os.path.join(os.path.dirname(__file__), 'test.mp4')
 
     def build(self):
         # basic layout blocks
@@ -162,56 +165,72 @@ class LeapControl(App):
         self.root.add_widget(self.scm)
 
         # Navigation
+        self.root.add_widget(self.navigation())
+
+        # add screens to screen manager
+        replay_screen = Screen(name='replay')
+        self.scm.add_widget(replay_screen)
+
+        intro_screen = Screen(name='intro')
+        path_video = os.path.join(self.fn_video)
+        player = VideoPlayer(source=path_video)
+        intro_screen.add_widget(player)
+        self.scm.add_widget(intro_screen)
+        self.scm.current = 'intro'
+
+        return self.root
+
+    def navigation(self):
         navigation = BoxLayout(height=48, size_hint_y=None)
         bt_intro = Button(text='Intro', height=48, size_hint_y=None,
-                          on_release=lambda a: self.start_intro())
+                          on_release=lambda a: self.screen_intro())
         bt_demo = Button(text='Demo', height=48, size_hint_y=None,
-                         on_release=lambda a: self.start_demo())
+                         on_release=lambda a: self.screen_demo())
         bt_replay = Button(text='Replay', height=48, size_hint_y=None,
                            on_release=lambda a: self.set_screen('replay'))
         navigation.add_widget(bt_intro)
         navigation.add_widget(bt_demo)
         navigation.add_widget(bt_replay)
-        self.root.add_widget(navigation)
 
-        # add screens to screen manager
-        intro_screen = Screen(name='intro')
-        path_video = os.path.join(os.path.dirname(__file__), 'test.mp4')
-        player = VideoPlayer(source=path_video)
-        intro_screen.add_widget(player)
-        self.scm.add_widget(intro_screen)
+        return navigation
 
+    def screen_intro(self):
+        self.scm.current = 'intro'
+
+    def screen_demo(self):
+        # This is a hack
+        # We rebuild the demo screen when called
+        # to reset the playback.
+        for cur_screen in self.scm.screens:
+            if cur_screen.name == 'demo':
+                # delte old demo screen
+                self.scm.remove_widget(cur_screen)
+                break
+
+        self.playback_thread = MidiThread(self.fn_midi, self.midi_port)
+        self.playback_thread.daemon = True
+
+        # create a new one
         demo_screen = Screen(name='demo')
-        # demo_screen.on_leave(self.midi_thread.join())
-
-        self.painter = WormWidget(self.midi_thread, self.my_controller)
+        self.painter = WormWidget(self.playback_thread, self.worm_controller)
         demo_screen.add_widget(self.painter)
         Clock.schedule_interval(self.painter.update, 0.05)
         self.scm.add_widget(demo_screen)
 
-        replay_screen = Screen(name='replay')
-        self.scm.add_widget(replay_screen)
-
-        return self.root
-
-    def start_intro(self):
-        self.scm.current = 'intro'
-
-    def start_demo(self):
         self.scm.current = 'demo'
-        self.midi_thread.start()
-        # bm_controller.start()
+        self.playback_thread.start()
 
     def set_screen(self, screen_name):
         # self.midi_thread.stop()
         self.scm.current = screen_name
+        self.playback_thread.stop_playing()
 
     def clear_canvas(self, obj):
         self.painter.canvas.clear()
 
 
 if __name__ == '__main__':
-    selected_port, selected_port_name = select_port()
+    _, selected_midi_port = select_port()
 
     # Get the demo type:
     try:
@@ -221,8 +240,7 @@ if __name__ == '__main__':
 
     if demo_type == 0:
         print('Using MIDI file as input')
-        midi_file = select_file()
-        th = MidiThread(midi_file, selected_port_name)
+        fn_midi = select_file()
     elif demo_type == 1:
         print('Using BM file as input')
         try:
@@ -293,17 +311,17 @@ if __name__ == '__main__':
             # bm_controller = DummyMIDIController()
             q_dial = None
 
-        bm_thread = BasisMixerMidiThread(bm_file,
-                                         midi_port=selected_port_name,
-                                         vel_min=vel_min,
-                                         vel_max=vel_max,
-                                         tempo_ave=tempo_ave,
-                                         velocity_ave=velocity_ave,
-                                         deadpan=deadpan,
-                                         post_process_config=config,
-                                         bm_queue=q_dial,
-                                         # bm_controller=bm_controller
-                                         )
+        # playback_thread = BasisMixerMidiThread(bm_file,
+        #                                        midi_port=selected_port_name,
+        #                                        vel_min=vel_min,
+        #                                        vel_max=vel_max,
+        #                                        tempo_ave=tempo_ave,
+        #                                        velocity_ave=velocity_ave,
+        #                                        deadpan=deadpan,
+        #                                        post_process_config=config,
+        #                                        bm_queue=q_dial,
+        #                                        # bm_controller=bm_controller
+        #                                        )
 
     # use_lm = int(input('Use LeapMotion? (type 1): '))
     try:
@@ -313,10 +331,12 @@ if __name__ == '__main__':
 
     if use_lm == 1:
         # check if leap motion tracker is available
-        my_controller = controller.LeapMotion()
+        worm_controller = controller.LeapMotion()
     else:
         # use mouse fallback
-        my_controller = controller.Mouse()
+        worm_controller = controller.Mouse()
 
     # run the app
-    LeapControl(my_controller).run()
+    LeapControl(worm_controller,
+                midi_port=selected_midi_port,
+                fn_midi=fn_midi).run()

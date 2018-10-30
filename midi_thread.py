@@ -22,10 +22,22 @@ from basismixer.performance_codec import load_bm_preds
 class MidiThread(threading.Thread):
     def __init__(self, midi_path, midi_port):
         threading.Thread.__init__(self)
-        self.midi = midi_path
+        self.path_midi = midi_path
+        self.midi = None
+        self.load_midi(self.path_midi)
         self.midi_port = midi_port
         self.vel = None
         self.tempo = 1
+        self.play = True
+
+    def load_midi(self, path_midi):
+        self.midi = mido.MidiFile(path_midi)
+
+    def start_playing(self):
+        self.play = True
+
+    def stop_playing(self):
+        self.play = False
 
     def set_velocity(self, vel):
         self.vel = vel
@@ -33,21 +45,22 @@ class MidiThread(threading.Thread):
     def set_tempo(self, tempo):
         self.tempo = tempo
 
-    def stop(self):
-        self.stopper = True
-        print('stop midi thread')
-
     def run(self):
-        with mido.open_output(self.midi_port) as outport:
-            for msg in mido.MidiFile(self.midi):
-                play_msg = msg
-                if msg.type == 'note_on':
-                    if msg.velocity != 0 and self.vel is not None:
-                        play_msg = msg.copy(velocity=self.vel)
+        outport = mido.open_output(self.midi_port)
 
-                time.sleep(play_msg.time*self.tempo)
+        for msg in self.midi:
+            play_msg = msg
+            if msg.type == 'note_on':
+                if msg.velocity != 0 and self.vel is not None:
+                    play_msg = msg.copy(velocity=self.vel)
 
-                outport.send(play_msg)
+            time.sleep(play_msg.time*self.tempo)
+            outport.send(play_msg)
+
+            if not self.play:
+                break
+
+        return 0
 
 
 class BasisMixerMidiThread(threading.Thread):
