@@ -197,6 +197,9 @@ class LeapControl(App):
     def screen_intro(self):
         self.scm.current = 'intro'
 
+        if self.playback_thread is not None:
+            self.playback_thread.stop_playing()
+
     def screen_demo(self):
         # This is a hack
         # We rebuild the demo screen when called
@@ -223,7 +226,9 @@ class LeapControl(App):
     def set_screen(self, screen_name):
         # self.midi_thread.stop()
         self.scm.current = screen_name
-        self.playback_thread.stop_playing()
+
+        if self.playback_thread is not None:
+            self.playback_thread.stop_playing()
 
     def clear_canvas(self, obj):
         self.painter.canvas.clear()
