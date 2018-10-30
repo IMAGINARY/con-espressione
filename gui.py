@@ -1,15 +1,17 @@
 """
-Run the GUI demo
+Run the Demo
 
 TODO
 ----
 
 * Add external controller (PowerMate)
 * Add config file for pre-processing BM performance?
-* Improve user interface for setting up the demo 
-  (add a proper before the worm visualization?)
+* Improve user interface for setting up the demo
+  (before the worm visualization?)
 """
 import os
+import json
+
 
 from kivy.app import App
 from kivy.uix.widget import Widget
@@ -23,6 +25,12 @@ import mido
 
 from midi_thread import MidiThread, BasisMixerMidiThread
 import controller
+import threading
+import queue
+
+from basismixer.midi_controller import (MIDIController,
+                                        DummyMIDIController)
+# import multiprocessing as mp
 
 
 def select_port():
@@ -31,7 +39,11 @@ def select_port():
     for cur_idx, cur_port in enumerate(midi_ports):
         print('{} \t {}'.format(cur_idx, cur_port))
 
-    port_nr = int(input('Select Port: '))
+    try:
+        port_nr = int(input('Select Port (default is 0): '))
+    except ValueError:
+        port_nr = 0
+    # port_nr = int(input('Select Port: '))
     print('\n')
 
     return port_nr, midi_ports[port_nr]
@@ -39,17 +51,30 @@ def select_port():
 
 def select_file(file_path='./midi/', file_type='Midi'):
     # get available MIDIs
-    midi_files = [f for f in os.listdir(
+    all_files = [f for f in os.listdir(
         file_path) if os.path.isfile(os.path.join(file_path, f))]
 
     files = []
 
     print('Nr \t File')
-    for i, file in enumerate(midi_files):
-        files.append(os.path.join(file_path, file))
+    for i, file in enumerate(all_files):
+        if file_type == 'Midi' and '.mid' in file:
+            files.append(os.path.join(file_path, file))
+
+        elif file_type == 'BM file' and '.txt' in file:
+            files.append(os.path.join(file_path, file))
+
+        elif file_type == 'JSON file' and '.json' in file:
+            files.append(os.path.join(file_path, file))
+
+    for i, file in enumerate(files):
         print('{} \t {}'.format(i, file))
 
-    file_nr = int(input('Select {0}: '.format(file_type)))
+    try:
+        file_nr = int(input('Select {0}: '.format(file_type)))
+    except ValueError:
+        file_nr = 0
+    # file_nr = int(input('Select {0}: '.format(file_type)))
 
     return files[file_nr]
 
@@ -156,6 +181,7 @@ class MyPaintApp(App):
 
         Clock.schedule_interval(self.painter.update, 0.05)
         th.start()
+        bm_controller.start()
 
         return parent
 
@@ -166,7 +192,11 @@ class MyPaintApp(App):
 if __name__ == '__main__':
     selected_port, selected_port_name = select_port()
 
-    demo_type = int(input('Use MIDI (type 0) or BM (type 1) file as input?: '))
+    try:
+        demo_type = int(
+            input('Use MIDI (type 0) or BM (type 1) file as input? (Default BM): '))
+    except ValueError:
+        demo_type = 1
 
     if demo_type == 0:
         print('Using MIDI file as input')
@@ -175,17 +205,92 @@ if __name__ == '__main__':
 
     elif demo_type == 1:
         print('Using BM file as input')
-        deadpan = int(input('Deadpan performance (type 1)?: '))
+        try:
+            deadpan = int(input('Deadpan performance (type 1)?: '))
+        except ValueError:
+            deadpan = 0
 
         if deadpan == 1:
             deadpan = True
         else:
             deadpan = False
         bm_file = select_file(file_path='./bm_files', file_type='BM file')
-        th = BasisMixerMidiThread(bm_file, selected_port_name,
-                                  deadpan=deadpan)
+        # Load config file
+        config_file = select_file(file_path='./config_files',
+                                  file_type='JSON file')
 
-    use_lm = int(input('Use LeapMotion? (type 1): '))
+        config = json.load(open(config_file))
+
+        if 'vel_min' in config:
+            vel_min = config.pop('vel_min')
+        else:
+            vel_min = 30
+
+        if 'vel_max' in config:
+            vel_max = config.pop('vel_max')
+        else:
+            vel_max = 110
+
+        if 'tempo_ave' in config:
+            tempo_ave = config.pop('tempo_ave')
+        else:
+            # This tempo is for the Etude Op 10 No 3
+            tempo_ave = 55
+
+        if 'velocity_ave' in config:
+            velocity_ave = config.pop('velocity_ave')
+        else:
+            velocity_ave = 50
+
+        try:
+            use_bm_controller = int(
+                input('Use controller for the BM (type 1, default is 0)? '))
+        except ValueError:
+            use_bm_controller = 0
+
+        if use_bm_controller:
+            # import powermate
+            q_dial = queue.Queue()
+            input_midi_ports = mido.get_input_names()
+
+            for cur_idx, cur_port in enumerate(input_midi_ports):
+                print('{} \t {}'.format(cur_idx, cur_port))
+
+            try:
+                port_nr = int(input('Select Port (default is 0): '))
+            except ValueError:
+                port_nr = 0
+            # port_nr = int(input('Select Port: '))
+            print('\n')
+
+            bm_controller = MIDIController(input_midi_ports[port_nr],
+                                           q_dial)
+            # bm_controller = threading.Thread(
+            #     target=powermate.run_device, args=(q_dial,))
+            # bm_controller.start()
+            
+        else:
+            bm_controller = DummyMIDIController()
+            q_dial = None
+
+        th = BasisMixerMidiThread(bm_file,
+                                  midi_port=selected_port_name,
+                                  vel_min=vel_min,
+                                  vel_max=vel_max,
+                                  tempo_ave=tempo_ave,
+                                  velocity_ave=velocity_ave,
+                                  deadpan=deadpan,
+                                  post_process_config=config,
+                                  bm_queue=q_dial,
+                                  # bm_controller=bm_controller
+                                  )
+
+    # use_lm = int(input('Use LeapMotion? (type 1): '))
+    try:
+        use_lm = int(
+            input('Use LeapMotion? (type 1, otherwise use Mouse): '))
+    except ValueError:
+        use_lm = 0
 
     if use_lm == 1:
         # check if leap motion tracker is available

@@ -13,7 +13,15 @@ from madmom)
 import numpy as np
 
 
-def load_bm_preds(filename, deadpan=False):
+def standardize(array):
+    return (array - array.mean()) / (array.std())
+
+
+def minmax_normalize(array):
+    return (array - array.min()) / (array.max() - array.min())
+
+
+def load_bm_preds(filename, deadpan=False, post_process_config={}):
     """Loads precomputed predictions of the Basis Mixer.
 
     Parameters
@@ -30,11 +38,6 @@ def load_bm_preds(filename, deadpan=False):
         (0:Pitches, 1:score ioi, 2:durations, 3:vel_trend
          4:vel_dev, 5:log_bpr, 6:timing, 7:log_art,
          8:melody)
-
-    TODO
-    ----
-    * Preprocess parameters here?
-    * Expand grace notes
     """
     # Load predictions file
     bm_data = np.loadtxt(filename)
@@ -49,11 +52,48 @@ def load_bm_preds(filename, deadpan=False):
 
     if not deadpan:
         # Performance information (expressive parameters)
-        vel_trend = bm_data[:, 3] / bm_data[:, 3].mean()
-        vel_dev = bm_data[:, 4]
-        log_bpr = bm_data[:, 5]
-        timing = bm_data[:, 6]
-        log_art = bm_data[:, 7]
+
+        # Minmax velocity trend
+        vel_trend = minmax_normalize(bm_data[:, 3])
+
+        if 'vel_trend' in post_process_config:
+            exag_exp = post_process_config['vel_trend'].get('exag_exp', 1.0)
+            vel_trend = vel_trend ** exag_exp
+
+        vel_trend /= vel_trend.mean()
+
+        # Standardize vel_dev
+        vel_dev = standardize(bm_data[:, 4])
+        if 'vel_dev' in post_process_config:
+            # Rescale and recenter parameters
+            vd_std = post_process_config['vel_dev'].get('std', 1.0)
+            vd_mean = post_process_config['vel_dev'].get('mean', 0.0)
+            vel_dev = (vel_dev * vd_std) + vd_mean
+
+        # Standardize log_bpr
+        log_bpr = standardize(bm_data[:, 5])
+        if 'log_bpr' in post_process_config:
+            # Rescale and recenter parameters
+            lb_std = post_process_config['log_bpr'].get('std', 1.0)
+            lb_mean = post_process_config['log_bpr'].get('mean', 0.0)
+            log_bpr = (log_bpr * lb_std) + lb_mean
+
+        # Standardize timing
+        timing = standardize(bm_data[:, 6])
+        if 'timing' in post_process_config:
+            # Rescale and recenter parameters
+            ti_std = post_process_config['timing'].get('std', 1.0)
+            ti_mean = post_process_config['timing'].get('mean', 0.0)
+            timing = (timing * ti_std) + ti_mean
+
+        # Standardize log articulation
+        log_art = standardize(bm_data[:, 7])
+        if 'log_art' in post_process_config:
+            # Rescale and recenter parameters
+            vd_std = post_process_config['log_art'].get('std', 1.0)
+            vd_mean = post_process_config['log_art'].get('mean', 0.0)
+            log_art = (log_art * vd_std) + vd_mean
+
     else:
         # Expressive parameters corresponding to a deadpan performance
         n_notes = len(pitches)
