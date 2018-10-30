@@ -50,7 +50,7 @@ class PowerMate(threading.Thread):
                     right = float(d[1] >= 1 and d[1] <= 10)
                     button = d[0]
                     value += mult * (right - left)
-                    
+
                     if button:
                         value = self.init_value
 
@@ -59,7 +59,7 @@ class PowerMate(threading.Thread):
                                     a_max=1.0)
                     self.out_q.put(value)
         except KeyboardInterrupt:
-            break
+            return 0
 
 
 class DummyMIDIController(object):
@@ -68,23 +68,3 @@ class DummyMIDIController(object):
 
     def start(self):
         pass
-
-
-# if __name__ == '__main__':
-
-    # midi_ports = mido.get_input_names()
-
-    # for cur_idx, cur_port in enumerate(midi_ports):
-    #     print('{} \t {}'.format(cur_idx, cur_port))
-
-    # try:
-    #     port_nr = int(input('Select Port (default is 0): '))
-    # except ValueError:
-    #     port_nr = 0
-    # # port_nr = int(input('Select Port: '))
-    # print('\n')
-
-    # midi_port = midi_ports[port_nr]
-
-    # mc = MIDIController(midi_port)
-    # mc.start()

@@ -26,14 +26,16 @@ class MidiThread(threading.Thread):
         self.midi_port = midi_port
         self.vel = None
         self.tempo = 1
-        # Set the q for the gui:
-        #self.q_gui = q_gui
 
     def set_velocity(self, vel):
         self.vel = vel
 
     def set_tempo(self, tempo):
         self.tempo = tempo
+
+    def stop(self):
+        self.stopper = True
+        print('stop midi thread')
 
     def run(self):
         with mido.open_output(self.midi_port) as outport:

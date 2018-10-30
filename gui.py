@@ -10,26 +10,26 @@ TODO
   (before the worm visualization?)
 """
 import os
+os.environ['KIVY_VIDEO'] = 'ffpyplayer'
 import json
-
 
 from kivy.app import App
 from kivy.uix.widget import Widget
 from kivy.core.window import Window
 from kivy.graphics import Color, Ellipse
 from kivy.clock import Clock
-from kivy.uix.dropdown import DropDown
 from kivy.uix.button import Button
+from kivy.uix.boxlayout import BoxLayout
+from kivy.uix.screenmanager import ScreenManager, Screen, SlideTransition
+from kivy.uix.videoplayer import VideoPlayer
 
 import mido
 
 from midi_thread import MidiThread, BasisMixerMidiThread
 import controller
-import threading
 import queue
 
-from basismixer.midi_controller import (MIDIController,
-                                        DummyMIDIController)
+# from basismixer.midi_controller import MIDIController, DummyMIDIController
 # import multiprocessing as mp
 
 
@@ -79,10 +79,10 @@ def select_file(file_path='./midi/', file_type='Midi'):
     return files[file_nr]
 
 
-class MyPaintWidget(Widget):
+class WormWidget(Widget):
 
     def __init__(self, th, controller):
-        super(MyPaintWidget, self).__init__()
+        super(WormWidget, self).__init__()
 
         self.controller = controller
 
@@ -148,42 +148,63 @@ class MyPaintWidget(Widget):
                              self.size[1]), size=(size, size))
 
 
-class MyPaintApp(App):
-
+class LeapControl(App):
     def __init__(self, my_controller):
         App.__init__(self)
-
         self.my_controller = my_controller
+        self.midi_thread = MidiThread(midi_file, selected_port_name)
+        self.midi_thread.daemon = True
 
     def build(self):
-        parent = Widget()
+        # basic layout blocks
+        self.root = BoxLayout(orientation='vertical')
+        self.scm = ScreenManager(transition=SlideTransition())
+        self.root.add_widget(self.scm)
 
-        # dropdown = DropDown()
-        # midi_files = select_file()
-        # # for index in range(len(MIDIFILES)):
-        # for index in midi_files.keys():
-        #
-        #     btn = Button(text='{}'.format(midi_files[index]), size_hint_y=None, height=44)
-        #     btn.bind(on_release=lambda btn: dropdown.select(midi_files[btn.text]))
-        #
-        #     dropdown.add_widget(btn)
-        #
-        # mainbutton = Button(text='Hello', size_hint=(None, None))
-        # mainbutton.bind(on_release=dropdown.open)
-        #
-        # dropdown.bind(on_select=lambda instance, x: setattr(mainbutton, 'text', x))
-        #
-        #
-        # parent.add_widget(mainbutton)
+        # Navigation
+        navigation = BoxLayout(height=48, size_hint_y=None)
+        bt_intro = Button(text='Intro', height=48, size_hint_y=None,
+                          on_release=lambda a: self.start_intro())
+        bt_demo = Button(text='Demo', height=48, size_hint_y=None,
+                         on_release=lambda a: self.start_demo())
+        bt_replay = Button(text='Replay', height=48, size_hint_y=None,
+                           on_release=lambda a: self.set_screen('replay'))
+        navigation.add_widget(bt_intro)
+        navigation.add_widget(bt_demo)
+        navigation.add_widget(bt_replay)
+        self.root.add_widget(navigation)
 
-        self.painter = MyPaintWidget(th, self.my_controller)
-        parent.add_widget(self.painter)
+        # add screens to screen manager
+        intro_screen = Screen(name='intro')
+        path_video = os.path.join(os.path.dirname(__file__), 'test.mp4')
+        player = VideoPlayer(source=path_video)
+        intro_screen.add_widget(player)
+        self.scm.add_widget(intro_screen)
 
+        demo_screen = Screen(name='demo')
+        # demo_screen.on_leave(self.midi_thread.join())
+
+        self.painter = WormWidget(self.midi_thread, self.my_controller)
+        demo_screen.add_widget(self.painter)
         Clock.schedule_interval(self.painter.update, 0.05)
-        th.start()
-        bm_controller.start()
+        self.scm.add_widget(demo_screen)
 
-        return parent
+        replay_screen = Screen(name='replay')
+        self.scm.add_widget(replay_screen)
+
+        return self.root
+
+    def start_intro(self):
+        self.scm.current = 'intro'
+
+    def start_demo(self):
+        self.scm.current = 'demo'
+        self.midi_thread.start()
+        # bm_controller.start()
+
+    def set_screen(self, screen_name):
+        # self.midi_thread.stop()
+        self.scm.current = screen_name
 
     def clear_canvas(self, obj):
         self.painter.canvas.clear()
@@ -192,9 +213,9 @@ class MyPaintApp(App):
 if __name__ == '__main__':
     selected_port, selected_port_name = select_port()
 
+    # Get the demo type:
     try:
-        demo_type = int(
-            input('Use MIDI (type 0) or BM (type 1) file as input? (Default BM): '))
+        demo_type = int(input('Use MIDI (type 0) or BM (type 1) file as input? (Default BM): '))
     except ValueError:
         demo_type = 1
 
@@ -202,7 +223,6 @@ if __name__ == '__main__':
         print('Using MIDI file as input')
         midi_file = select_file()
         th = MidiThread(midi_file, selected_port_name)
-
     elif demo_type == 1:
         print('Using BM file as input')
         try:
@@ -214,11 +234,12 @@ if __name__ == '__main__':
             deadpan = True
         else:
             deadpan = False
-        bm_file = select_file(file_path='./bm_files', file_type='BM file')
-        # Load config file
-        config_file = select_file(file_path='./config_files',
-                                  file_type='JSON file')
 
+        # Load BM file
+        bm_file = select_file(file_path='./bm_files', file_type='BM file')
+
+        # Load config file
+        config_file = select_file(file_path='./config_files', file_type='JSON file')
         config = json.load(open(config_file))
 
         if 'vel_min' in config:
@@ -243,11 +264,11 @@ if __name__ == '__main__':
             velocity_ave = 50
 
         try:
-            use_bm_controller = int(
-                input('Use controller for the BM (type 1, default is 0)? '))
+            use_bm_controller = int(input('Use controller for the BM (type 1, default is 0)? '))
         except ValueError:
             use_bm_controller = 0
 
+        # Use the USB controller for scaling BM's parameters
         if use_bm_controller:
             # import powermate
             q_dial = queue.Queue()
@@ -263,32 +284,30 @@ if __name__ == '__main__':
             # port_nr = int(input('Select Port: '))
             print('\n')
 
-            bm_controller = MIDIController(input_midi_ports[port_nr],
-                                           q_dial)
+            # bm_controller = MIDIController(input_midi_ports[port_nr],
+            #                                q_dial)
             # bm_controller = threading.Thread(
             #     target=powermate.run_device, args=(q_dial,))
             # bm_controller.start()
-            
         else:
-            bm_controller = DummyMIDIController()
+            # bm_controller = DummyMIDIController()
             q_dial = None
 
-        th = BasisMixerMidiThread(bm_file,
-                                  midi_port=selected_port_name,
-                                  vel_min=vel_min,
-                                  vel_max=vel_max,
-                                  tempo_ave=tempo_ave,
-                                  velocity_ave=velocity_ave,
-                                  deadpan=deadpan,
-                                  post_process_config=config,
-                                  bm_queue=q_dial,
-                                  # bm_controller=bm_controller
-                                  )
+        bm_thread = BasisMixerMidiThread(bm_file,
+                                         midi_port=selected_port_name,
+                                         vel_min=vel_min,
+                                         vel_max=vel_max,
+                                         tempo_ave=tempo_ave,
+                                         velocity_ave=velocity_ave,
+                                         deadpan=deadpan,
+                                         post_process_config=config,
+                                         bm_queue=q_dial,
+                                         # bm_controller=bm_controller
+                                         )
 
     # use_lm = int(input('Use LeapMotion? (type 1): '))
     try:
-        use_lm = int(
-            input('Use LeapMotion? (type 1, otherwise use Mouse): '))
+        use_lm = int(input('Use LeapMotion? (type 1, otherwise use Mouse): '))
     except ValueError:
         use_lm = 0
 
@@ -299,4 +318,5 @@ if __name__ == '__main__':
         # use mouse fallback
         my_controller = controller.Mouse()
 
-    MyPaintApp(my_controller).run()
+    # run the app
+    LeapControl(my_controller).run()
