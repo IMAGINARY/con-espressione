@@ -15,3 +15,4 @@ dependencies:
   - pip:
     - mido
     - python-rtmidi
+    - pyusb
