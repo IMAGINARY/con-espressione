@@ -1,5 +1,5 @@
 from threading import Thread
-import usb
+import hid
 
 
 class KnobThread(Thread):
@@ -9,30 +9,38 @@ class KnobThread(Thread):
         self.pos = 0
         self.progress_bar = progress_bar
 
-        VENDOR = 0x077d  # 1917
-        PRODUCT = 0x0410  # 1040
+        self.VendorID = 0x077d  # 1917
+        self.ProductID = 0x0410  # 1040
 
-        self.dev = usb.core.find(idVendor=VENDOR, idProduct=PRODUCT)
+        self.read = True
 
-        if self.dev is None:
-            raise Exception("Could not find Griffin PowerMate.")
+        self.device = hid.device()
 
-        # otherwise the kernel is busy
-        if self.dev.is_kernel_driver_active(0):
-            self.dev.detach_kernel_driver(0)
+        try:
+            self.device.open(self.VendorID, self.ProductID)
 
-        self.dev.set_configuration()
+        except IOError:
+            self.device = None
+            print('Invalid device')
 
     def run(self):
-        # self.pm.run()
-        while self.dev.read(129, 6, timeout=99999999999)[0] == 0:
 
-            rot = self.dev.read(129, 6, timeout=99999999999)[1]
+        while self.read and self.device is not None:
 
+            rot = self.device.read(64)[1]
             # other direction is encoded as 255
             if rot >= 127:
                 rot = -1  # for opposite direction
 
             self.pos = max(0, min(self.pos + rot, 90))
             self.progress_bar.set_value(self.pos)
+
+        if self.device is not None:
+            self.device.close()
+        return 0
+
+    def stop_reading(self):
+        self.read = False
+
+
 

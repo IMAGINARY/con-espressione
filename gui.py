@@ -86,9 +86,17 @@ class LeapControl(App):
         App.__init__(self)
         self.worm_controller = worm_controller
         self.playback_thread = None
+        self.knob_thread = None
         self.midi_port = midi_port
         self.fn_midi = fn_midi
         self.fn_video = os.path.join(os.path.dirname(__file__), 'test.mp4')
+
+    def build_config(self, config):
+
+        config.setdefaults('section1', {
+            'key1': 'value1',
+            'key2': '42'
+        })
 
     def build(self):
         # basic layout blocks
@@ -110,7 +118,33 @@ class LeapControl(App):
         self.scm.add_widget(intro_screen)
         self.scm.current = 'intro'
 
+
         return self.root
+
+
+
+    def build_settings(self, settings):
+        jsondata ="""[
+                    { "type": "title",
+                      "title": "Test application" },
+                
+                    { "type": "options",
+                      "title": "My first key",
+                      "desc": "Description of my first key",
+                      "section": "section1",
+                      "key": "key1",
+                      "options": ["value1", "value2", "another value"] },
+                
+                    { "type": "numeric",
+                      "title": "My second key",
+                      "desc": "Description of my second key",
+                      "section": "section1",
+                      "key": "key2" }
+                ]
+                """
+
+        settings.add_json_panel('Test application', self.config, data=jsondata)
+
 
     def navigation(self):
         navigation = BoxLayout(height=48, size_hint_y=None)
@@ -120,6 +154,7 @@ class LeapControl(App):
                          on_release=lambda a: self.screen_demo())
         bt_replay = Button(text='Replay', height=48, size_hint_y=None,
                            on_release=lambda a: self.set_screen('replay'))
+
         navigation.add_widget(bt_intro)
         navigation.add_widget(bt_demo)
         navigation.add_widget(bt_replay)
@@ -131,6 +166,9 @@ class LeapControl(App):
 
         if self.playback_thread is not None:
             self.playback_thread.stop_playing()
+        if self.knob_thread is not None:
+            self.knob_thread.stop_reading()
+            self.knob_thread.join()
 
     def screen_demo(self):
         # This is a hack
@@ -153,14 +191,16 @@ class LeapControl(App):
         box = RelativeLayout(pos=(self.painter.width-150, 20))
         vpb = CircularProgressBar(size_hint=(None, None), height=100, width=100, max=80)
         box.add_widget(vpb)
-        self.knob_thread = KnobThread(vpb)
-
         demo_screen.add_widget(box)
+
         Clock.schedule_interval(self.painter.update, 0.05)
         self.scm.add_widget(demo_screen)
 
         self.scm.current = 'demo'
         self.playback_thread.start()
+
+        # if self.knob_thread is None:
+        self.knob_thread = KnobThread(vpb)
         self.knob_thread.start()
 
     def set_screen(self, screen_name):
@@ -169,6 +209,10 @@ class LeapControl(App):
 
         if self.playback_thread is not None:
             self.playback_thread.stop_playing()
+
+        if self.knob_thread is not None:
+            self.knob_thread.stop_reading()
+            self.knob_thread.join()
 
     def clear_canvas(self, obj):
         self.painter.canvas.clear()
