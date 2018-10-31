@@ -1,12 +1,12 @@
 from kivy.uix.widget import Widget
 from kivy.core.window import Window
-from kivy.graphics import Color, Ellipse
+from kivy.graphics import Color, Ellipse, Rectangle
 
 
 class WormWidget(Widget):
 
-    def __init__(self, th, controller):
-        super(WormWidget, self).__init__()
+    def __init__(self, th, controller, **kwargs):
+        super(WormWidget, self).__init__(**kwargs)
 
         self.controller = controller
 
@@ -57,6 +57,9 @@ class WormWidget(Widget):
         self.canvas.clear()
 
         with self.canvas:
+            Color(0, 1, 0)
+            Rectangle(pos=self.pos, size=self.size)
+
             for i, p in enumerate(self.positions):
                 # color with adjusted alpha channel
                 # the older, make more transparent

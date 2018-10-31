@@ -19,10 +19,11 @@ from kivy.uix.button import Button
 from kivy.uix.boxlayout import BoxLayout
 from kivy.uix.screenmanager import ScreenManager, Screen, SlideTransition
 from kivy.uix.videoplayer import VideoPlayer
-from widgets.worm import WormWidget
+from kivy.graphics import Color
 
 from kivy.uix.relativelayout import RelativeLayout
 from powermate.knob_thread import KnobThread
+from widgets.worm import WormWidget
 from widgets.circular_progress_bar import CircularProgressBar
 from widgets.circle_vis import CircleWidget
 import mido
@@ -102,7 +103,7 @@ class LeapControl(App):
     def build(self):
         # basic layout blocks
         self.root = BoxLayout(orientation='vertical')
-        self.scm = ScreenManager(transition=SlideTransition())
+        self.scm = ScreenManager(transition=SlideTransition(), size_hint=(1.0, 0.9))
         self.root.add_widget(self.scm)
 
         # Navigation
@@ -119,7 +120,6 @@ class LeapControl(App):
         self.scm.add_widget(intro_screen)
         self.scm.current = 'intro'
 
-
         return self.root
 
 
@@ -128,14 +128,14 @@ class LeapControl(App):
         jsondata ="""[
                     { "type": "title",
                       "title": "Test application" },
-                
+
                     { "type": "options",
                       "title": "My first key",
                       "desc": "Description of my first key",
                       "section": "section1",
                       "key": "key1",
                       "options": ["value1", "value2", "another value"] },
-                
+
                     { "type": "numeric",
                       "title": "My second key",
                       "desc": "Description of my second key",
@@ -146,14 +146,13 @@ class LeapControl(App):
 
         settings.add_json_panel('Test application', self.config, data=jsondata)
 
-
     def navigation(self):
-        navigation = BoxLayout(height=48, size_hint_y=None)
-        bt_intro = Button(text='Intro', height=48, size_hint_y=None,
+        navigation = BoxLayout(size_hint=(1.0, 0.1))
+        bt_intro = Button(text='Intro',
                           on_release=lambda a: self.screen_intro())
-        bt_demo = Button(text='Demo', height=48, size_hint_y=None,
+        bt_demo = Button(text='Demo',
                          on_release=lambda a: self.screen_demo())
-        bt_replay = Button(text='Replay', height=48, size_hint_y=None,
+        bt_replay = Button(text='Replay',
                            on_release=lambda a: self.set_screen('replay'))
 
         navigation.add_widget(bt_intro)
@@ -184,25 +183,40 @@ class LeapControl(App):
         self.playback_thread = MidiThread(self.fn_midi, self.midi_port)
         self.playback_thread.daemon = True
 
-        # create a new one
-        demo_screen = Screen(name='demo')
-        screen_layout = BoxLayout(orientation='vertical')
+        # worm
         self.painter = WormWidget(self.playback_thread, self.worm_controller)
         Clock.schedule_interval(self.painter.update, 0.05)
 
-        vpb = CircularProgressBar(size_hint=(None, None), height=100, width=100, max=80)
+        # visualizations
+        vpb = CircularProgressBar()
         # bm_circle_1 = CircleWidget(size_hint=(None, None), height=100, width=100, max=80)
-        bm_circle_1 = CircleWidget(size_hint=(None, None), height=100, width=100)
+        bm_circle_1 = CircleWidget(size_hint=(None, None))
+        bm_circle_2 = CircleWidget(size_hint=(None, None))
+        bm_circle_3 = CircleWidget(size_hint=(None, None))
+        bm_circle_4 = CircleWidget(size_hint=(None, None))
+        bm_circle_5 = CircleWidget(size_hint=(None, None))
 
+        circle_layout = BoxLayout(orientation='horizontal')
+        circle_layout.add_widget(bm_circle_1, index=0)
+        circle_layout.add_widget(bm_circle_2, index=1)
+        circle_layout.add_widget(bm_circle_3, index=2)
+        circle_layout.add_widget(bm_circle_4, index=3)
+        circle_layout.add_widget(bm_circle_5, index=4)
+        circle_layout.add_widget(vpb, index=5)
 
-        circle_layout = BoxLayout(orientation='horizontal', height=40, size_hint_y=None)
-        circle_layout.add_widget(bm_circle_1)
-        circle_layout.add_widget(vpb)
+        # add widgets to layout
+        screen_layout = BoxLayout(orientation='vertical')
 
+        screen_layout.add_widget(Button(text='Intro'))
         screen_layout.add_widget(self.painter)
-        screen_layout.add_widget(circle_layout)
+        # screen_layout.add_widget(circle_layout)
+        screen_layout.add_widget(Button(text='Intro'))
 
+        # add layout to screen
+        demo_screen = Screen(name='demo')
         demo_screen.add_widget(screen_layout)
+
+        # add screen to screen manager
         self.scm.add_widget(demo_screen)
 
         self.scm.current = 'demo'
