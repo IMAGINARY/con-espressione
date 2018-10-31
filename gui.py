@@ -31,76 +31,69 @@ import mido
 from midi_thread import MidiThread, BasisMixerMidiThread
 import controller
 import queue
+from kivy.config import Config
 
+Config.set('graphics', 'fullscreen', 0)
+Config.write()
 # from basismixer.midi_controller import MIDIController, DummyMIDIController
 # import multiprocessing as mp
 
 
-def select_port():
-    midi_ports = mido.get_output_names()
-
-    for cur_idx, cur_port in enumerate(midi_ports):
-        print('{} \t {}'.format(cur_idx, cur_port))
-
-    try:
-        port_nr = int(input('Select Port (default is 0): '))
-    except ValueError:
-        port_nr = 0
-    # port_nr = int(input('Select Port: '))
-    print('\n')
-
-    return port_nr, midi_ports[port_nr]
-
-
-def select_file(file_path='./midi/', file_type='Midi'):
+def load_files(file_path='./midi/', file_type='Midi'):
     # get available MIDIs
     all_files = [f for f in os.listdir(
         file_path) if os.path.isfile(os.path.join(file_path, f))]
 
     files = []
 
-    print('Nr \t File')
     for i, file in enumerate(all_files):
         if file_type == 'Midi' and '.mid' in file:
             files.append(os.path.join(file_path, file))
 
-        elif file_type == 'BM file' and '.txt' in file:
-            files.append(os.path.join(file_path, file))
-
-        elif file_type == 'JSON file' and '.json' in file:
-            files.append(os.path.join(file_path, file))
-
-    for i, file in enumerate(files):
-        print('{} \t {}'.format(i, file))
-
-    try:
-        file_nr = int(input('Select {0}: '.format(file_type)))
-    except ValueError:
-        file_nr = 0
-    # file_nr = int(input('Select {0}: '.format(file_type)))
-
-    return files[file_nr]
+    return files
 
 
 class LeapControl(App):
-    def __init__(self, worm_controller,
-                 midi_port, fn_midi):
+    def __init__(self):
         App.__init__(self)
-        self.worm_controller = worm_controller
+
+
+        self.worm_controller = None
         self.playback_thread = None
         self.knob_thread = None
-        self.midi_port = midi_port
-        self.fn_midi = fn_midi
+        self.midi_port = None
+        self.fn_midi = None
         self.fn_video = os.path.join(os.path.dirname(__file__), 'test.mp4')
 
     def build_config(self, config):
 
-        config.setdefaults('section1', {
-            'key1': 'value1',
-            'key2': '42'
+        config.setdefaults('settings', {
+            'playmode': 'MIDI',
+            'midiport': 'Midi Through:Midi Through Port-0 14:0',
+            'control': 'Mouse',
+            'song': 'bach.mid'
         })
 
+    def get_worm_controller(self):
+        worm_controller = controller.Mouse()
+        if self.config.get('settings', 'control') == 'LeapMotion':
+            # check if leap motion tracker is available
+            worm_controller = controller.LeapMotion()
+        return worm_controller
+
+    def get_song_path(self):
+
+        return os.path.join('./midi/', self.config.get('settings', 'song'))
+
+    def get_midi_port(self):
+        return self.config.get('settings', 'midiport')
+
     def build(self):
+
+        self.worm_controller = self.get_worm_controller()
+        self.fn_midi = self.get_song_path()
+        self.fn_midi = self.get_song_path()
+
         # basic layout blocks
         self.root = BoxLayout(orientation='vertical')
         self.scm = ScreenManager(transition=SlideTransition(), size_hint=(1.0, 0.9))
@@ -122,29 +115,57 @@ class LeapControl(App):
 
         return self.root
 
+    def on_config_change(self, config, section, key, value):
 
+        if section == "settings":
+            if key == "midiport":
+                self.midi_port = value
+            if key == 'control':
+                self.worm_controller = self.get_worm_controller()
+            if key == 'song':
+                self.fn_midi = self.get_song_path()
 
     def build_settings(self, settings):
+
+        songs = load_files()
+        ports = mido.get_output_names()
+
         jsondata ="""[
                     { "type": "title",
-                      "title": "Test application" },
+                      "title": "LeapControl" },
 
                     { "type": "options",
-                      "title": "My first key",
-                      "desc": "Description of my first key",
-                      "section": "section1",
-                      "key": "key1",
-                      "options": ["value1", "value2", "another value"] },
+                      "title": "PlayMode",
+                      "desc": "Use Deadpan Midi or BasisMixer",
+                      "section": "settings",
+                      "key": "playmode",
+                      "options": ["MIDI", "BM"] },
 
-                    { "type": "numeric",
-                      "title": "My second key",
-                      "desc": "Description of my second key",
-                      "section": "section1",
-                      "key": "key2" }
+                    { "type": "options",
+                      "title": "MidiPort",
+                      "desc": "Select Midi Port",
+                      "section": "settings",
+                      "key": "midiport",
+                      "options": %s },
+
+                   { "type": "options",
+                      "title": "Control",
+                      "desc": "Use Mouse or LeapMotion",
+                      "section": "settings",
+                      "key": "control",
+                      "options": ["Mouse", "LeapMotion"] },
+
+                   { "type": "options",
+                      "title": "Song",
+                      "desc": "Select Song",
+                      "section": "settings",
+                      "key": "song",
+                      "options": %s }
                 ]
-                """
+                """%(str(ports).replace('\'', '"'),
+                     str([os.path.split(song)[-1] for song in songs]).replace('\'', '"'))
 
-        settings.add_json_panel('Test application', self.config, data=jsondata)
+        settings.add_json_panel('LeapControl', self.config, data=jsondata)
 
     def navigation(self):
         navigation = BoxLayout(size_hint=(1.0, 0.1))
@@ -242,113 +263,89 @@ class LeapControl(App):
 
 
 if __name__ == '__main__':
-    _, selected_midi_port = select_port()
 
-    # Get the demo type:
-    try:
-        demo_type = int(input('Use MIDI (type 0) or BM (type 1) file as input? (Default BM): '))
-    except ValueError:
-        demo_type = 1
 
-    if demo_type == 0:
-        print('Using MIDI file as input')
-        fn_midi = select_file()
-    elif demo_type == 1:
-        print('Using BM file as input')
-        try:
-            deadpan = int(input('Deadpan performance (type 1)?: '))
-        except ValueError:
-            deadpan = 0
+    # if demo_type == 1:
+    #     print('Using BM file as input')
+    #     try:
+    #         deadpan = int(input('Deadpan performance (type 1)?: '))
+    #     except ValueError:
+    #         deadpan = 0
+    #
+    #     if deadpan == 1:
+    #         deadpan = True
+    #     else:
+    #         deadpan = False
+    #
+    #     # Load BM file
+    #     bm_file = select_file(file_path='./bm_files', file_type='BM file')
+    #
+    #     # Load config file
+    #     config_file = select_file(file_path='./config_files', file_type='JSON file')
+    #     config = json.load(open(config_file))
+    #
+    #     if 'vel_min' in config:
+    #         vel_min = config.pop('vel_min')
+    #     else:
+    #         vel_min = 30
+    #
+    #     if 'vel_max' in config:
+    #         vel_max = config.pop('vel_max')
+    #     else:
+    #         vel_max = 110
+    #
+    #     if 'tempo_ave' in config:
+    #         tempo_ave = config.pop('tempo_ave')
+    #     else:
+    #         # This tempo is for the Etude Op 10 No 3
+    #         tempo_ave = 55
+    #
+    #     if 'velocity_ave' in config:
+    #         velocity_ave = config.pop('velocity_ave')
+    #     else:
+    #         velocity_ave = 50
+    #
+    #     try:
+    #         use_bm_controller = int(input('Use controller for the BM (type 1, default is 0)? '))
+    #     except ValueError:
+    #         use_bm_controller = 0
+    #
+    #     # Use the USB controller for scaling BM's parameters
+    #     if use_bm_controller:
+    #         # import powermate
+    #         q_dial = queue.Queue()
+    #         input_midi_ports = mido.get_input_names()
+    #
+    #         for cur_idx, cur_port in enumerate(input_midi_ports):
+    #             print('{} \t {}'.format(cur_idx, cur_port))
+    #
+    #         try:
+    #             port_nr = int(input('Select Port (default is 0): '))
+    #         except ValueError:
+    #             port_nr = 0
+    #         # port_nr = int(input('Select Port: '))
+    #         print('\n')
+    #
+    #         # bm_controller = MIDIController(input_midi_ports[port_nr],
+    #         #                                q_dial)
+    #         # bm_controller = threading.Thread(
+    #         #     target=powermate.run_device, args=(q_dial,))
+    #         # bm_controller.start()
+    #     else:
+    #         # bm_controller = DummyMIDIController()
+    #         q_dial = None
+    #
+    #     playback_thread = BasisMixerMidiThread(bm_file,
+    #                                            midi_port=selected_port_name,
+    #                                            vel_min=vel_min,
+    #                                            vel_max=vel_max,
+    #                                            tempo_ave=tempo_ave,
+    #                                            velocity_ave=velocity_ave,
+    #                                            deadpan=deadpan,
+    #                                            post_process_config=config,
+    #                                            bm_queue=q_dial,
+    #                                            # bm_controller=bm_controller
+    #                                            )
 
-        if deadpan == 1:
-            deadpan = True
-        else:
-            deadpan = False
-
-        # Load BM file
-        bm_file = select_file(file_path='./bm_files', file_type='BM file')
-
-        # Load config file
-        config_file = select_file(file_path='./config_files', file_type='JSON file')
-        config = json.load(open(config_file))
-
-        if 'vel_min' in config:
-            vel_min = config.pop('vel_min')
-        else:
-            vel_min = 30
-
-        if 'vel_max' in config:
-            vel_max = config.pop('vel_max')
-        else:
-            vel_max = 110
-
-        if 'tempo_ave' in config:
-            tempo_ave = config.pop('tempo_ave')
-        else:
-            # This tempo is for the Etude Op 10 No 3
-            tempo_ave = 55
-
-        if 'velocity_ave' in config:
-            velocity_ave = config.pop('velocity_ave')
-        else:
-            velocity_ave = 50
-
-        try:
-            use_bm_controller = int(input('Use controller for the BM (type 1, default is 0)? '))
-        except ValueError:
-            use_bm_controller = 0
-
-        # Use the USB controller for scaling BM's parameters
-        if use_bm_controller:
-            # import powermate
-            q_dial = queue.Queue()
-            input_midi_ports = mido.get_input_names()
-
-            for cur_idx, cur_port in enumerate(input_midi_ports):
-                print('{} \t {}'.format(cur_idx, cur_port))
-
-            try:
-                port_nr = int(input('Select Port (default is 0): '))
-            except ValueError:
-                port_nr = 0
-            # port_nr = int(input('Select Port: '))
-            print('\n')
-
-            # bm_controller = MIDIController(input_midi_ports[port_nr],
-            #                                q_dial)
-            # bm_controller = threading.Thread(
-            #     target=powermate.run_device, args=(q_dial,))
-            # bm_controller.start()
-        else:
-            # bm_controller = DummyMIDIController()
-            q_dial = None
-
-        # playback_thread = BasisMixerMidiThread(bm_file,
-        #                                        midi_port=selected_port_name,
-        #                                        vel_min=vel_min,
-        #                                        vel_max=vel_max,
-        #                                        tempo_ave=tempo_ave,
-        #                                        velocity_ave=velocity_ave,
-        #                                        deadpan=deadpan,
-        #                                        post_process_config=config,
-        #                                        bm_queue=q_dial,
-        #                                        # bm_controller=bm_controller
-        #                                        )
-
-    # use_lm = int(input('Use LeapMotion? (type 1): '))
-    try:
-        use_lm = int(input('Use LeapMotion? (type 1, otherwise use Mouse): '))
-    except ValueError:
-        use_lm = 0
-
-    if use_lm == 1:
-        # check if leap motion tracker is available
-        worm_controller = controller.LeapMotion()
-    else:
-        # use mouse fallback
-        worm_controller = controller.Mouse()
-
-    # run the app
-    LeapControl(worm_controller,
-                midi_port=selected_midi_port,
-                fn_midi=fn_midi).run()
+    #run the app
+    LeapControl().run()
