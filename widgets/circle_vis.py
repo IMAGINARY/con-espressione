@@ -13,6 +13,6 @@ class CircleWidget(Widget):
             # Empty canvas instructions
             self.canvas.clear()
 
-            # Draw no-progress circle
+            # Draw circle
             Color(0.26, 0.26, 0.26)
             Ellipse(pos=self.pos, size=self.size)

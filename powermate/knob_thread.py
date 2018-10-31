@@ -6,7 +6,7 @@ class KnobThread(Thread):
     def __init__(self, progress_bar):
         Thread.__init__(self)
 
-        self.pos = 0
+        self.knob_pos = 0
         self.progress_bar = progress_bar
 
         self.VendorID = 0x077d  # 1917
@@ -32,8 +32,8 @@ class KnobThread(Thread):
             if rot >= 127:
                 rot = -1  # for opposite direction
 
-            self.pos = max(0, min(self.pos + rot, 90))
-            self.progress_bar.set_value(self.pos)
+            self.knob_pos = max(0, min(self.knob_pos + rot, 100))
+            self.progress_bar.set_value(self.knob_pos)
 
         if self.device is not None:
             self.device.close()
@@ -41,6 +41,3 @@ class KnobThread(Thread):
 
     def stop_reading(self):
         self.read = False
-
-
-

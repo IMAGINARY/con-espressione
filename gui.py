@@ -17,6 +17,7 @@ from kivy.app import App
 from kivy.clock import Clock
 from kivy.uix.button import Button
 from kivy.uix.boxlayout import BoxLayout
+from kivy.uix.stacklayout import StackLayout
 from kivy.uix.screenmanager import ScreenManager, Screen, SlideTransition
 from kivy.uix.videoplayer import VideoPlayer
 from kivy.graphics import Color
@@ -95,7 +96,7 @@ class LeapControl(App):
         self.fn_midi = self.get_song_path()
 
         # basic layout blocks
-        self.root = BoxLayout(orientation='vertical')
+        self.root = StackLayout()
         self.scm = ScreenManager(transition=SlideTransition(), size_hint=(1.0, 0.9))
         self.root.add_widget(self.scm)
 
@@ -130,40 +131,40 @@ class LeapControl(App):
         songs = load_files()
         ports = mido.get_output_names()
 
-        jsondata ="""[
-                    { "type": "title",
-                      "title": "LeapControl" },
+        jsondata = """[
+                        { "type": "title",
+                          "title": "LeapControl" },
 
-                    { "type": "options",
-                      "title": "PlayMode",
-                      "desc": "Use Deadpan Midi or BasisMixer",
-                      "section": "settings",
-                      "key": "playmode",
-                      "options": ["MIDI", "BM"] },
+                        { "type": "options",
+                          "title": "PlayMode",
+                          "desc": "Use Deadpan Midi or BasisMixer",
+                          "section": "settings",
+                          "key": "playmode",
+                          "options": ["MIDI", "BM"] },
 
-                    { "type": "options",
-                      "title": "MidiPort",
-                      "desc": "Select Midi Port",
-                      "section": "settings",
-                      "key": "midiport",
-                      "options": %s },
+                        { "type": "options",
+                          "title": "MidiPort",
+                          "desc": "Select Midi Port",
+                          "section": "settings",
+                          "key": "midiport",
+                          "options": %s },
 
-                   { "type": "options",
-                      "title": "Control",
-                      "desc": "Use Mouse or LeapMotion",
-                      "section": "settings",
-                      "key": "control",
-                      "options": ["Mouse", "LeapMotion"] },
+                       { "type": "options",
+                          "title": "Control",
+                          "desc": "Use Mouse or LeapMotion",
+                          "section": "settings",
+                          "key": "control",
+                          "options": ["Mouse", "LeapMotion"] },
 
-                   { "type": "options",
-                      "title": "Song",
-                      "desc": "Select Song",
-                      "section": "settings",
-                      "key": "song",
-                      "options": %s }
-                ]
-                """%(str(ports).replace('\'', '"'),
-                     str([os.path.split(song)[-1] for song in songs]).replace('\'', '"'))
+                       { "type": "options",
+                          "title": "Song",
+                          "desc": "Select Song",
+                          "section": "settings",
+                          "key": "song",
+                          "options": %s }
+                    ]
+                    """ % (str(ports).replace('\'', '"'),
+                           str([os.path.split(song)[-1] for song in songs]).replace('\'', '"'))
 
         settings.add_json_panel('LeapControl', self.config, data=jsondata)
 
@@ -205,33 +206,30 @@ class LeapControl(App):
         self.playback_thread.daemon = True
 
         # worm
-        self.painter = WormWidget(self.playback_thread, self.worm_controller)
-        Clock.schedule_interval(self.painter.update, 0.05)
+        self.worm_widget = WormWidget(self.playback_thread, self.worm_controller,
+                                      size_hint=(1.0, 0.9))
+        Clock.schedule_interval(self.worm_widget.update, 0.05)
 
         # visualizations
-        vpb = CircularProgressBar()
-        # bm_circle_1 = CircleWidget(size_hint=(None, None), height=100, width=100, max=80)
-        bm_circle_1 = CircleWidget(size_hint=(None, None))
-        bm_circle_2 = CircleWidget(size_hint=(None, None))
-        bm_circle_3 = CircleWidget(size_hint=(None, None))
-        bm_circle_4 = CircleWidget(size_hint=(None, None))
-        bm_circle_5 = CircleWidget(size_hint=(None, None))
+        bm_circle_1 = CircleWidget(x=0)
+        bm_circle_2 = CircleWidget(x=100)
+        bm_circle_3 = CircleWidget(x=200)
+        bm_circle_4 = CircleWidget(x=300)
+        bm_circle_5 = CircleWidget(x=400)
+        bm_scaler = CircularProgressBar(x=500)
 
-        circle_layout = BoxLayout(orientation='horizontal')
-        circle_layout.add_widget(bm_circle_1, index=0)
-        circle_layout.add_widget(bm_circle_2, index=1)
-        circle_layout.add_widget(bm_circle_3, index=2)
-        circle_layout.add_widget(bm_circle_4, index=3)
-        circle_layout.add_widget(bm_circle_5, index=4)
-        circle_layout.add_widget(vpb, index=5)
+        circle_layout = StackLayout(orientation="lr-tb", size_hint=(1.0, 0.1))
+        circle_layout.add_widget(bm_circle_1)
+        circle_layout.add_widget(bm_circle_2)
+        circle_layout.add_widget(bm_circle_3)
+        circle_layout.add_widget(bm_circle_4)
+        circle_layout.add_widget(bm_circle_5)
+        circle_layout.add_widget(bm_scaler)
 
         # add widgets to layout
-        screen_layout = BoxLayout(orientation='vertical')
-
-        screen_layout.add_widget(Button(text='Intro'))
-        screen_layout.add_widget(self.painter)
-        # screen_layout.add_widget(circle_layout)
-        screen_layout.add_widget(Button(text='Intro'))
+        screen_layout = StackLayout(size_hint=(1.0, 1.0))
+        screen_layout.add_widget(self.worm_widget)
+        screen_layout.add_widget(circle_layout)
 
         # add layout to screen
         demo_screen = Screen(name='demo')
@@ -244,7 +242,7 @@ class LeapControl(App):
         self.playback_thread.start()
 
         # if self.knob_thread is None:
-        self.knob_thread = KnobThread(vpb)
+        self.knob_thread = KnobThread(bm_scaler)
         self.knob_thread.start()
 
     def set_screen(self, screen_name):

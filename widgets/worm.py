@@ -57,19 +57,21 @@ class WormWidget(Widget):
         self.canvas.clear()
 
         with self.canvas:
-            Color(0, 1, 0)
-            Rectangle(pos=self.pos, size=self.size)
+            # debug green
+            # Color(0, 1, 0)
+            # Rectangle(pos=self.pos, size=self.size)
 
-            for i, p in enumerate(self.positions):
+            for cur_t, cur_pos in enumerate(self.positions):
                 # color with adjusted alpha channel
                 # the older, make more transparent
-                Color(*color, mode='rgb', a=1 - i * (1.0 / self.max_len_pos))
+                Color(*color, mode='rgb',
+                      a=1 - cur_t * (1.0 / self.max_len_pos))
 
                 # circle size depends on position in list
                 # the older, the smaller
                 d = 30.0
-                size = d - (d / self.max_len_pos) * i
+                cur_size = d - (d / self.max_len_pos) * cur_t
 
                 # draw circle
-                Ellipse(pos=(p[0] * self.size[0], p[1] *
-                             self.size[1]), size=(size, size))
+                Ellipse(pos=(cur_pos[0] * self.size[0], cur_pos[1] * self.size[1]),
+                        size=(cur_size, cur_size))
