@@ -14,14 +14,16 @@ os.environ['KIVY_VIDEO'] = 'ffpyplayer'
 import json
 
 from kivy.app import App
-from kivy.uix.label import Label
 from kivy.clock import Clock
 from kivy.uix.button import Button
 from kivy.uix.boxlayout import BoxLayout
 from kivy.uix.screenmanager import ScreenManager, Screen, SlideTransition
 from kivy.uix.videoplayer import VideoPlayer
 from widgets.worm import WormWidget
-from widgets.vertical_progress_bar import VerticalProgressBar
+
+from kivy.uix.relativelayout import RelativeLayout
+from powermate.knob_thread import KnobThread
+from widgets.circular_progress_bar import CircularProgressBar
 import mido
 
 from midi_thread import MidiThread, BasisMixerMidiThread
@@ -147,11 +149,19 @@ class LeapControl(App):
         demo_screen = Screen(name='demo')
         self.painter = WormWidget(self.playback_thread, self.worm_controller)
         demo_screen.add_widget(self.painter)
+
+        box = RelativeLayout(pos=(self.painter.width-150, 20))
+        vpb = CircularProgressBar(size_hint=(None, None), height=100, width=100, max=80)
+        box.add_widget(vpb)
+        self.knob_thread = KnobThread(vpb)
+
+        demo_screen.add_widget(box)
         Clock.schedule_interval(self.painter.update, 0.05)
         self.scm.add_widget(demo_screen)
 
         self.scm.current = 'demo'
         self.playback_thread.start()
+        self.knob_thread.start()
 
     def set_screen(self, screen_name):
         # self.midi_thread.stop()
