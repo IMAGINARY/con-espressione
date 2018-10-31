@@ -19,11 +19,12 @@ from kivy.uix.button import Button
 from kivy.uix.boxlayout import BoxLayout
 from kivy.uix.screenmanager import ScreenManager, Screen, SlideTransition
 from kivy.uix.videoplayer import VideoPlayer
-from widgets.worm import WormWidget
 
 from kivy.uix.relativelayout import RelativeLayout
 from powermate.knob_thread import KnobThread
+from widgets.worm import WormWidget
 from widgets.circular_progress_bar import CircularProgressBar
+from widgets.circle_vis import CircleWidget
 import mido
 
 from midi_thread import MidiThread, BasisMixerMidiThread
@@ -147,16 +148,23 @@ class LeapControl(App):
 
         # create a new one
         demo_screen = Screen(name='demo')
+        screen_layout = BoxLayout(orientation='vertical')
         self.painter = WormWidget(self.playback_thread, self.worm_controller)
-        demo_screen.add_widget(self.painter)
+        Clock.schedule_interval(self.painter.update, 0.05)
 
-        box = RelativeLayout(pos=(self.painter.width-150, 20))
         vpb = CircularProgressBar(size_hint=(None, None), height=100, width=100, max=80)
-        box.add_widget(vpb)
+        # bm_circle_1 = CircleWidget(size_hint=(None, None), height=100, width=100, max=80)
+        bm_circle_1 = CircleWidget(size_hint=(None, None), height=100, width=100)
         self.knob_thread = KnobThread(vpb)
 
-        demo_screen.add_widget(box)
-        Clock.schedule_interval(self.painter.update, 0.05)
+        circle_layout = BoxLayout(orientation='horizontal', height=40, size_hint_y=None)
+        circle_layout.add_widget(bm_circle_1)
+        circle_layout.add_widget(vpb)
+
+        screen_layout.add_widget(self.painter)
+        screen_layout.add_widget(circle_layout)
+
+        demo_screen.add_widget(screen_layout)
         self.scm.add_widget(demo_screen)
 
         self.scm.current = 'demo'
