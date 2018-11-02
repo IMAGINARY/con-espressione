@@ -72,8 +72,9 @@ class BMThread(threading.Thread):
                  velocity_ave=50,
                  deadpan=False,
                  post_process_config={},
-                 bm_queue=None):
+                 scaler=None):
         threading.Thread.__init__(self)
+
         self.midi_port = midi_port
         self.vel = 64
         self.tempo = 1
@@ -88,7 +89,8 @@ class BMThread(threading.Thread):
         self.vel_max = vel_max
 
         # Controller for the effect of the BM (PowerMate)
-        self.bm_queue = bm_queue
+        self.scaler = scaler
+        print(self.scaler.value)
 
     def set_velocity(self, vel):
         self.vel = vel
@@ -96,6 +98,9 @@ class BMThread(threading.Thread):
     def set_tempo(self, tempo):
         # Scale average tempo
         self.tempo = tempo * self.tempo_ave
+
+    def set_scaler(self, scalar):
+        self.scalar = scalar
 
     def run(self):
         # Get unique score positions (and sort them)
@@ -126,22 +131,14 @@ class BMThread(threading.Thread):
                  vt, vd, lbpr,
                  tim, lart, mel) = self.score_dict[on]
 
-                # TODO:
-
                 # update tempo and dynamics from the controller
                 bpr_a = self.tempo
                 vel_a = self.vel
 
-                if self.bm_queue is not None:
-                    try:
-                        p_update = self.bm_queue.get_nowait()
-                    except Queue.Empty:
-                        p_update = None
-                        pass
+                p_update = self.scaler.value
 
                 if p_update is not None:
-                    controller_p = 3 * p_update
-                    print('controller p', controller_p)
+                    controller_p = 3 * p_update / 100
 
                 # Scale parameters
                 vt = vt ** controller_p

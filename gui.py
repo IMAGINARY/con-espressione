@@ -37,22 +37,6 @@ from widgets.knob import Knob
 
 Config.set('graphics', 'fullscreen', 0)
 Config.write()
-# from basismixer.midi_controller import MIDIController, DummyMIDIController
-# import multiprocessing as mp
-
-
-def load_files(file_path='./midi/', file_type='Midi'):
-    # get available MIDIs
-    all_files = [f for f in os.listdir(
-        file_path) if os.path.isfile(os.path.join(file_path, f))]
-
-    files = []
-
-    for i, file in enumerate(all_files):
-        if file_type == 'Midi' and '.mid' in file:
-            files.append(os.path.join(file_path, file))
-
-    return files
 
 
 class LeapControl(App):
@@ -65,24 +49,6 @@ class LeapControl(App):
         self.midi_port = None
         self.fn_midi = None
         self.fn_video = os.path.join(os.path.dirname(__file__), 'test.mp4')
-
-        # # Load BM file
-        # bm_file = select_file(file_path='./bm_files', file_type='BM file')
-        #
-        # # Load config file
-        # config_file = select_file(file_path='./config_files', file_type='JSON file')
-        # config = json.load(open(config_file))
-        # playback_thread = BasisMixerMidiThread(bm_file,
-        #                                        midi_port=selected_port_name,
-        #                                        vel_min=vel_min,
-        #                                        vel_max=vel_max,
-        #                                        tempo_ave=tempo_ave,
-        #                                        velocity_ave=velocity_ave,
-        #                                        deadpan=deadpan,
-        #                                        post_process_config=config,
-        #                                        bm_queue=q_dial,
-        #                                        # bm_controller=bm_controller
-        #                                        )
 
     def build(self):
         """Create all GUI items."""
@@ -112,7 +78,7 @@ class LeapControl(App):
         return self.root
 
     def build_config(self, config):
-        """Define Menu points."""
+        """Define default config."""
         config.setdefaults('settings', {
             'playmode': 'BM',
             'midiport': 'Midi Through:Midi Through Port-0 14:0',
@@ -142,8 +108,22 @@ class LeapControl(App):
     def get_midi_port(self):
         return self.config.get('settings', 'midiport')
 
+    def list_songs(self, file_path='./midi/', file_type='Midi'):
+        """Get available songs."""
+        # get available MIDIs
+        all_files = [f for f in os.listdir(
+            file_path) if os.path.isfile(os.path.join(file_path, f))]
+
+        files = []
+
+        for i, file in enumerate(all_files):
+            if file_type == 'Midi' and '.mid' in file:
+                files.append(os.path.join(file_path, file))
+
+        return files
+
     def build_settings(self, settings):
-        songs = load_files()
+        songs = self.list_songs()
         ports = mido.get_output_names()
 
         jsondata = """[
@@ -213,10 +193,39 @@ class LeapControl(App):
         # to reset the playback.
         for cur_screen in self.scm.screens:
             if cur_screen.name == 'demo':
-                # delte old demo screen
+                # delete old demo screen
                 self.scm.remove_widget(cur_screen)
                 break
 
+        # visualization
+        top = 0.4
+        size_hint = (None, None)
+        circle_layout = FloatLayout()
+        bm_circle_1 = CircleWidget(pos_hint={'top': top, 'right': 0.15}, size_hint=size_hint)
+        bm_circle_2 = CircleWidget(pos_hint={'top': top, 'right': 0.3}, size_hint=size_hint)
+        bm_circle_3 = CircleWidget(pos_hint={'top': top, 'right': 0.45}, size_hint=size_hint)
+        bm_circle_4 = CircleWidget(pos_hint={'top': top, 'right': 0.60}, size_hint=size_hint)
+        bm_circle_5 = CircleWidget(pos_hint={'top': top, 'right': 0.75}, size_hint=size_hint)
+
+        bm_scaler_knob = Knob(pos_hint={'top': 0.4, 'right': 0.95})
+        bm_scaler_knob.value = 0
+        bm_scaler_knob.max = 100
+        bm_scaler_knob.min = 0
+        bm_scaler_knob.marker_img = 'widgets/img/bline3.png'
+        bm_scaler_knob.knobimg_source = 'widgets/img/knob_black.png'
+
+        circle_layout.add_widget(bm_circle_1)
+        circle_layout.add_widget(bm_circle_2)
+        circle_layout.add_widget(bm_circle_3)
+        circle_layout.add_widget(bm_circle_4)
+        circle_layout.add_widget(bm_circle_5)
+        circle_layout.add_widget(bm_scaler_knob)
+
+        # if self.knob_thread is None:
+        self.knob_thread = KnobThread(bm_scaler_knob)
+        self.knob_thread.start()
+
+        # select playback mode
         if self.config.get('settings', 'playmode') == 'MIDI':
             self.playback_thread = MidiThread(self.fn_midi, self.midi_port)
         if self.config.get('settings', 'playmode') == 'BM':
@@ -232,7 +241,8 @@ class LeapControl(App):
             #                                 bm_queue=q_dial)
             self.playback_thread = BMThread('./bm_files/chopin_op10_No3_bm_short.txt',
                                             midi_port=self.midi_port,
-                                            post_process_config=post_process_config)
+                                            post_process_config=post_process_config,
+                                            scaler=bm_scaler_knob)
 
         self.playback_thread.daemon = True
 
@@ -241,28 +251,7 @@ class LeapControl(App):
                                       size_hint=(1.0, 0.9))
         Clock.schedule_interval(self.worm_widget.update, 0.05)
 
-        top = 0.4
-        size_hint = (None, None)
-        circle_layout = FloatLayout()
-        bm_circle_1 = CircleWidget(pos_hint={'top': top, 'right': 0.15}, size_hint=size_hint)
-        bm_circle_2 = CircleWidget(pos_hint={'top': top, 'right': 0.3}, size_hint=size_hint)
-        bm_circle_3 = CircleWidget(pos_hint={'top': top, 'right': 0.45}, size_hint=size_hint)
-        bm_circle_4 = CircleWidget(pos_hint={'top': top, 'right': 0.60}, size_hint=size_hint)
-        bm_circle_5 = CircleWidget(pos_hint={'top': top, 'right': 0.75}, size_hint=size_hint)
-
-        bm_scaler = Knob(pos_hint={'top': 0.4, 'right': 0.95})
-        bm_scaler.value = 0
-        bm_scaler.max = 100
-        bm_scaler.min = 0
-        bm_scaler.marker_img = "widgets/img/bline3.png"
-        bm_scaler.knobimg_source = "widgets/img/knob_black.png"
-
-        circle_layout.add_widget(bm_circle_1)
-        circle_layout.add_widget(bm_circle_2)
-        circle_layout.add_widget(bm_circle_3)
-        circle_layout.add_widget(bm_circle_4)
-        circle_layout.add_widget(bm_circle_5)
-        circle_layout.add_widget(bm_scaler)
+        self.playback_thread.start()
 
         # add widgets to layout
         screen_layout = BoxLayout(orientation='vertical')
@@ -277,11 +266,6 @@ class LeapControl(App):
         self.scm.add_widget(demo_screen)
 
         self.scm.current = 'demo'
-        self.playback_thread.start()
-
-        # if self.knob_thread is None:
-        self.knob_thread = KnobThread(bm_scaler)
-        self.knob_thread.start()
 
     def set_screen(self, screen_name):
         # self.midi_thread.stop()
