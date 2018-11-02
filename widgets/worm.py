@@ -23,7 +23,7 @@ class WormWidget(Widget):
 
         self.th = th
         self.size = Window.size
-
+        print(self.pos, self.size)
         self.positions_hist = []
 
     def update(self, *args):
@@ -59,6 +59,7 @@ class WormWidget(Widget):
         with self.canvas:
             # debug green
             # Color(0, 1, 0)
+            # print(self.pos, self.size)
             # Rectangle(pos=self.pos, size=self.size)
 
             for cur_t, cur_pos in enumerate(self.positions):
@@ -75,3 +76,4 @@ class WormWidget(Widget):
                 # draw circle
                 Ellipse(pos=(cur_pos[0] * self.size[0], cur_pos[1] * self.size[1]),
                         size=(cur_size, cur_size))
+

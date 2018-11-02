@@ -33,6 +33,8 @@ from midi_thread import MidiThread, BasisMixerMidiThread
 import controller
 import queue
 from kivy.config import Config
+from kivy.uix.floatlayout import FloatLayout
+from widgets.knob import Knob
 
 Config.set('graphics', 'fullscreen', 0)
 Config.write()
@@ -210,15 +212,23 @@ class LeapControl(App):
                                       size_hint=(1.0, 0.9))
         Clock.schedule_interval(self.worm_widget.update, 0.05)
 
-        # visualizations
-        bm_circle_1 = CircleWidget(x=0)
-        bm_circle_2 = CircleWidget(x=100)
-        bm_circle_3 = CircleWidget(x=200)
-        bm_circle_4 = CircleWidget(x=300)
-        bm_circle_5 = CircleWidget(x=400)
-        bm_scaler = CircularProgressBar(x=500)
+        top = 0.4
+        size_hint = (None, None)
+        circle_layout = FloatLayout()
+        bm_circle_1 = CircleWidget(pos_hint={'top': top, 'right': 0.15}, size_hint=size_hint)
+        bm_circle_2 = CircleWidget(pos_hint={'top': top, 'right': 0.3}, size_hint=size_hint)
+        bm_circle_3 = CircleWidget(pos_hint={'top': top, 'right': 0.45}, size_hint=size_hint)
+        bm_circle_4 = CircleWidget(pos_hint={'top': top, 'right': 0.60}, size_hint=size_hint)
+        bm_circle_5 = CircleWidget(pos_hint={'top': top, 'right': 0.75}, size_hint=size_hint)
 
-        circle_layout = StackLayout(orientation="lr-tb", size_hint=(1.0, 0.1))
+        bm_scaler = Knob(pos_hint={'top': 0.4, 'right': 0.95})
+        bm_scaler.value = 0
+        bm_scaler.max = 100
+        bm_scaler.min = 0
+        bm_scaler.marker_img = "widgets/img/bline3.png"
+        bm_scaler.knobimg_source = "widgets/img/knob_black.png"
+
+
         circle_layout.add_widget(bm_circle_1)
         circle_layout.add_widget(bm_circle_2)
         circle_layout.add_widget(bm_circle_3)
@@ -227,7 +237,7 @@ class LeapControl(App):
         circle_layout.add_widget(bm_scaler)
 
         # add widgets to layout
-        screen_layout = StackLayout(size_hint=(1.0, 1.0))
+        screen_layout = BoxLayout(orientation='vertical')
         screen_layout.add_widget(self.worm_widget)
         screen_layout.add_widget(circle_layout)
 
@@ -244,6 +254,7 @@ class LeapControl(App):
         # if self.knob_thread is None:
         self.knob_thread = KnobThread(bm_scaler)
         self.knob_thread.start()
+
 
     def set_screen(self, screen_name):
         # self.midi_thread.stop()

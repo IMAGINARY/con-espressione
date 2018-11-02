@@ -7,6 +7,9 @@ class CircleWidget(Widget):
         super(CircleWidget, self).__init__(**kwargs)
 
         self.draw()
+        self.bind(pos=self.update_ell,
+                  size=self.update_ell)
+
 
     def draw(self):
         with self.canvas:
@@ -15,4 +18,9 @@ class CircleWidget(Widget):
 
             # Draw circle
             Color(0.26, 0.26, 0.26)
-            Ellipse(pos=self.pos, size=self.size)
+            # Ellipse(pos=self.pos, size=self.size)
+            self.ellipse = Ellipse(pos=self.pos, size=self.size)
+
+    def update_ell(self, *args):
+        self.ellipse.pos = self.pos
+        self.ellipse.size = self.size

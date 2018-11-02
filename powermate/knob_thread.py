@@ -3,11 +3,11 @@ import hid
 
 
 class KnobThread(Thread):
-    def __init__(self, progress_bar):
+    def __init__(self, knob):
         Thread.__init__(self)
 
         self.knob_pos = 0
-        self.progress_bar = progress_bar
+        self.knob = knob
 
         self.VendorID = 0x077d  # 1917
         self.ProductID = 0x0410  # 1040
@@ -33,7 +33,7 @@ class KnobThread(Thread):
                 rot = -1  # for opposite direction
 
             self.knob_pos = max(0, min(self.knob_pos + rot, 100))
-            self.progress_bar.set_value(self.knob_pos)
+            self.knob.value = self.knob_pos
 
         if self.device is not None:
             self.device.close()
