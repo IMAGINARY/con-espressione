@@ -74,5 +74,5 @@ class WormWidget(Widget):
                 cur_size = d - (d / self.max_len_pos) * cur_t
 
                 # draw circle
-                Ellipse(pos=(cur_pos[0] * self.size[0], cur_pos[1] * self.size[1]),
+                Ellipse(pos=(cur_pos[0] * self.size[0], cur_pos[1] * self.size[1]+100),
                         size=(cur_size, cur_size))

@@ -198,16 +198,16 @@ class LeapControl(App):
                 break
 
         # visualization
-        top = 0.4
+        top = 0.95
         size_hint = (None, None)
-        circle_layout = FloatLayout()
+        circle_layout = FloatLayout(size_hint=(1, 0.2))
         bm_circle_1 = CircleWidget(pos_hint={'top': top, 'right': 0.15}, size_hint=size_hint)
         bm_circle_2 = CircleWidget(pos_hint={'top': top, 'right': 0.3}, size_hint=size_hint)
         bm_circle_3 = CircleWidget(pos_hint={'top': top, 'right': 0.45}, size_hint=size_hint)
         bm_circle_4 = CircleWidget(pos_hint={'top': top, 'right': 0.60}, size_hint=size_hint)
         bm_circle_5 = CircleWidget(pos_hint={'top': top, 'right': 0.75}, size_hint=size_hint)
 
-        bm_scaler_knob = Knob(pos_hint={'top': 0.4, 'right': 0.95})
+        bm_scaler_knob = Knob(pos_hint={'top': 0.95, 'right': 0.95})
         bm_scaler_knob.value = 0
         bm_scaler_knob.max = 100
         bm_scaler_knob.min = 0
@@ -248,7 +248,7 @@ class LeapControl(App):
 
         # worm
         self.worm_widget = WormWidget(self.playback_thread, self.worm_controller,
-                                      size_hint=(1.0, 0.9))
+                                      size_hint=(1.0, 0.8))
         Clock.schedule_interval(self.worm_widget.update, 0.05)
 
         self.playback_thread.start()
