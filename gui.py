@@ -28,7 +28,7 @@ from widgets.worm import WormWidget
 from widgets.circle_vis import CircleWidget
 import mido
 
-from midi_thread import MidiThread, BasisMixerMidiThread
+from midi_thread import MidiThread, BMThread
 import controller
 import queue
 from kivy.config import Config
@@ -66,31 +66,26 @@ class LeapControl(App):
         self.fn_midi = None
         self.fn_video = os.path.join(os.path.dirname(__file__), 'test.mp4')
 
-    def build_config(self, config):
-
-        config.setdefaults('settings', {
-            'playmode': 'MIDI',
-            'midiport': 'Midi Through:Midi Through Port-0 14:0',
-            'control': 'Mouse',
-            'song': 'bach.mid'
-        })
-
-    def get_worm_controller(self):
-        worm_controller = controller.Mouse()
-        if self.config.get('settings', 'control') == 'LeapMotion':
-            # check if leap motion tracker is available
-            worm_controller = controller.LeapMotion()
-        return worm_controller
-
-    def get_song_path(self):
-
-        return os.path.join('./midi/', self.config.get('settings', 'song'))
-
-    def get_midi_port(self):
-        return self.config.get('settings', 'midiport')
+        # # Load BM file
+        # bm_file = select_file(file_path='./bm_files', file_type='BM file')
+        #
+        # # Load config file
+        # config_file = select_file(file_path='./config_files', file_type='JSON file')
+        # config = json.load(open(config_file))
+        # playback_thread = BasisMixerMidiThread(bm_file,
+        #                                        midi_port=selected_port_name,
+        #                                        vel_min=vel_min,
+        #                                        vel_max=vel_max,
+        #                                        tempo_ave=tempo_ave,
+        #                                        velocity_ave=velocity_ave,
+        #                                        deadpan=deadpan,
+        #                                        post_process_config=config,
+        #                                        bm_queue=q_dial,
+        #                                        # bm_controller=bm_controller
+        #                                        )
 
     def build(self):
-
+        """Create all GUI items."""
         self.worm_controller = self.get_worm_controller()
         self.fn_midi = self.get_song_path()
         self.fn_midi = self.get_song_path()
@@ -116,8 +111,16 @@ class LeapControl(App):
 
         return self.root
 
-    def on_config_change(self, config, section, key, value):
+    def build_config(self, config):
+        """Define Menu points."""
+        config.setdefaults('settings', {
+            'playmode': 'BM',
+            'midiport': 'Midi Through:Midi Through Port-0 14:0',
+            'control': 'Mouse',
+            'song': 'bach.mid'
+        })
 
+    def on_config_change(self, config, section, key, value):
         if section == "settings":
             if key == "midiport":
                 self.midi_port = value
@@ -126,8 +129,20 @@ class LeapControl(App):
             if key == 'song':
                 self.fn_midi = self.get_song_path()
 
-    def build_settings(self, settings):
+    def get_worm_controller(self):
+        worm_controller = controller.Mouse()
+        if self.config.get('settings', 'control') == 'LeapMotion':
+            # check if leap motion tracker is available
+            worm_controller = controller.LeapMotion()
+        return worm_controller
 
+    def get_song_path(self):
+        return os.path.join('./midi/', self.config.get('settings', 'song'))
+
+    def get_midi_port(self):
+        return self.config.get('settings', 'midiport')
+
+    def build_settings(self, settings):
         songs = load_files()
         ports = mido.get_output_names()
 
@@ -202,7 +217,23 @@ class LeapControl(App):
                 self.scm.remove_widget(cur_screen)
                 break
 
-        self.playback_thread = MidiThread(self.fn_midi, self.midi_port)
+        if self.config.get('settings', 'playmode') == 'MIDI':
+            self.playback_thread = MidiThread(self.fn_midi, self.midi_port)
+        if self.config.get('settings', 'playmode') == 'BM':
+            post_process_config = json.load(open('./config_files/chopin_op10_No3.json'))
+            # self.playback_thread = BMThread(bm_file,
+            #                                 midi_port=self.midi_port,
+            #                                 vel_min=vel_min,
+            #                                 vel_max=vel_max,
+            #                                 tempo_ave=tempo_ave,
+            #                                 velocity_ave=velocity_ave,
+            #                                 deadpan=deadpan,
+            #                                 post_process_config=config,
+            #                                 bm_queue=q_dial)
+            self.playback_thread = BMThread('./bm_files/chopin_op10_No3_bm_short.txt',
+                                            midi_port=self.midi_port,
+                                            post_process_config=post_process_config)
+
         self.playback_thread.daemon = True
 
         # worm
@@ -263,94 +294,7 @@ class LeapControl(App):
             self.knob_thread.stop_reading()
             self.knob_thread.join()
 
-    def clear_canvas(self, obj):
-        self.painter.canvas.clear()
-
 
 if __name__ == '__main__':
-
-
-    # if demo_type == 1:
-    #     print('Using BM file as input')
-    #     try:
-    #         deadpan = int(input('Deadpan performance (type 1)?: '))
-    #     except ValueError:
-    #         deadpan = 0
-    #
-    #     if deadpan == 1:
-    #         deadpan = True
-    #     else:
-    #         deadpan = False
-    #
-    #     # Load BM file
-    #     bm_file = select_file(file_path='./bm_files', file_type='BM file')
-    #
-    #     # Load config file
-    #     config_file = select_file(file_path='./config_files', file_type='JSON file')
-    #     config = json.load(open(config_file))
-    #
-    #     if 'vel_min' in config:
-    #         vel_min = config.pop('vel_min')
-    #     else:
-    #         vel_min = 30
-    #
-    #     if 'vel_max' in config:
-    #         vel_max = config.pop('vel_max')
-    #     else:
-    #         vel_max = 110
-    #
-    #     if 'tempo_ave' in config:
-    #         tempo_ave = config.pop('tempo_ave')
-    #     else:
-    #         # This tempo is for the Etude Op 10 No 3
-    #         tempo_ave = 55
-    #
-    #     if 'velocity_ave' in config:
-    #         velocity_ave = config.pop('velocity_ave')
-    #     else:
-    #         velocity_ave = 50
-    #
-    #     try:
-    #         use_bm_controller = int(input('Use controller for the BM (type 1, default is 0)? '))
-    #     except ValueError:
-    #         use_bm_controller = 0
-    #
-    #     # Use the USB controller for scaling BM's parameters
-    #     if use_bm_controller:
-    #         # import powermate
-    #         q_dial = queue.Queue()
-    #         input_midi_ports = mido.get_input_names()
-    #
-    #         for cur_idx, cur_port in enumerate(input_midi_ports):
-    #             print('{} \t {}'.format(cur_idx, cur_port))
-    #
-    #         try:
-    #             port_nr = int(input('Select Port (default is 0): '))
-    #         except ValueError:
-    #             port_nr = 0
-    #         # port_nr = int(input('Select Port: '))
-    #         print('\n')
-    #
-    #         # bm_controller = MIDIController(input_midi_ports[port_nr],
-    #         #                                q_dial)
-    #         # bm_controller = threading.Thread(
-    #         #     target=powermate.run_device, args=(q_dial,))
-    #         # bm_controller.start()
-    #     else:
-    #         # bm_controller = DummyMIDIController()
-    #         q_dial = None
-    #
-    #     playback_thread = BasisMixerMidiThread(bm_file,
-    #                                            midi_port=selected_port_name,
-    #                                            vel_min=vel_min,
-    #                                            vel_max=vel_max,
-    #                                            tempo_ave=tempo_ave,
-    #                                            velocity_ave=velocity_ave,
-    #                                            deadpan=deadpan,
-    #                                            post_process_config=config,
-    #                                            bm_queue=q_dial,
-    #                                            # bm_controller=bm_controller
-    #                                            )
-
-    #run the app
+    # run the app
     LeapControl().run()

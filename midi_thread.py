@@ -65,7 +65,7 @@ class MidiThread(threading.Thread):
         return 0
 
 
-class BasisMixerMidiThread(threading.Thread):
+class BMThread(threading.Thread):
     def __init__(self, bm_precomputed_path, midi_port,
                  vel_min=30, vel_max=110,
                  tempo_ave=55,
