@@ -201,11 +201,11 @@ class LeapControl(App):
         top = 0.95
         size_hint = (None, None)
         circle_layout = FloatLayout(size_hint=(1, 0.2))
-        bm_circle_1 = CircleWidget(pos_hint={'top': top, 'right': 0.15}, size_hint=size_hint)
-        bm_circle_2 = CircleWidget(pos_hint={'top': top, 'right': 0.3}, size_hint=size_hint)
-        bm_circle_3 = CircleWidget(pos_hint={'top': top, 'right': 0.45}, size_hint=size_hint)
-        bm_circle_4 = CircleWidget(pos_hint={'top': top, 'right': 0.60}, size_hint=size_hint)
-        bm_circle_5 = CircleWidget(pos_hint={'top': top, 'right': 0.75}, size_hint=size_hint)
+        bm_circle_1 = CircleWidget(color=(98/255, 56/255, 101/255), pos_hint={'top': top, 'right': 0.15}, size_hint=size_hint)
+        bm_circle_2 = CircleWidget(color=(87/255, 145/255, 58/255), pos_hint={'top': top, 'right': 0.3}, size_hint=size_hint)
+        bm_circle_3 = CircleWidget(color=(225/255, 155/255, 21/255), pos_hint={'top': top, 'right': 0.45}, size_hint=size_hint)
+        bm_circle_4 = CircleWidget(color=(35/255, 140/255, 17/2552), pos_hint={'top': top, 'right': 0.60}, size_hint=size_hint)
+        bm_circle_5 = CircleWidget(color=(208/255, 8/255, 124/255), pos_hint={'top': top, 'right': 0.75}, size_hint=size_hint)
 
         bm_scaler_knob = Knob(pos_hint={'top': 0.95, 'right': 0.95})
         bm_scaler_knob.value = 0
@@ -242,7 +242,8 @@ class LeapControl(App):
             self.playback_thread = BMThread('./bm_files/chopin_op10_No3_bm_short.txt',
                                             midi_port=self.midi_port,
                                             post_process_config=post_process_config,
-                                            scaler=bm_scaler_knob)
+                                            scaler=bm_scaler_knob, vis=[bm_circle_1, bm_circle_2, bm_circle_3,
+                                                                        bm_circle_4, bm_circle_5])
 
         self.playback_thread.daemon = True
 

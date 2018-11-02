@@ -72,7 +72,7 @@ class BMThread(threading.Thread):
                  velocity_ave=50,
                  deadpan=False,
                  post_process_config={},
-                 scaler=None):
+                 scaler=None, vis=None):
         threading.Thread.__init__(self)
 
         self.midi_port = midi_port
@@ -91,6 +91,7 @@ class BMThread(threading.Thread):
         # Controller for the effect of the BM (PowerMate)
         self.scaler = scaler
         print(self.scaler.value)
+        self.vis = vis
 
     def set_velocity(self, vel):
         self.vel = vel
@@ -146,6 +147,10 @@ class BMThread(threading.Thread):
                 lbpr *= controller_p
                 tim *= controller_p
                 lart *= controller_p
+
+                if self.vis is not None:
+                    for vis, scale in zip(self.vis, [vt, vd, lbpr, tim, lart]):
+                        vis.update_widget(scale)
 
                 # Compute equivalent onset
                 bp = (2 ** lbpr) * bpr_a
