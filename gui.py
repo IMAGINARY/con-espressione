@@ -25,7 +25,6 @@ from kivy.graphics import Color
 from kivy.uix.relativelayout import RelativeLayout
 from powermate.knob_thread import KnobThread
 from widgets.worm import WormWidget
-from widgets.circular_progress_bar import CircularProgressBar
 from widgets.circle_vis import CircleWidget
 import mido
 
