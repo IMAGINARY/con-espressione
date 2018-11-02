@@ -59,7 +59,6 @@ class LeapControl(App):
     def __init__(self):
         App.__init__(self)
 
-
         self.worm_controller = None
         self.playback_thread = None
         self.knob_thread = None
@@ -227,7 +226,6 @@ class LeapControl(App):
         bm_scaler.marker_img = "widgets/img/bline3.png"
         bm_scaler.knobimg_source = "widgets/img/knob_black.png"
 
-
         circle_layout.add_widget(bm_circle_1)
         circle_layout.add_widget(bm_circle_2)
         circle_layout.add_widget(bm_circle_3)
@@ -253,7 +251,6 @@ class LeapControl(App):
         # if self.knob_thread is None:
         self.knob_thread = KnobThread(bm_scaler)
         self.knob_thread.start()
-
 
     def set_screen(self, screen_name):
         # self.midi_thread.stop()
