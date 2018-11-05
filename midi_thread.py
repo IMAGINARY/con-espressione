@@ -19,6 +19,7 @@ import queue as Queue
 from basismixer.performance_codec import load_bm_preds
 import fluidsynth
 
+
 class MidiThread(threading.Thread):
     def __init__(self, midi_path, driver='alsa'):
         threading.Thread.__init__(self)
@@ -99,7 +100,7 @@ class BMThread(threading.Thread):
 
         # Controller for the effect of the BM (PowerMate)
         self.scaler = scaler
-        print(self.scaler.value)
+        # print(self.scaler.value)
         self.vis = vis
 
     def set_velocity(self, vel):
@@ -135,7 +136,6 @@ class BMThread(threading.Thread):
         fs.program_select(0, sfid, 0, 0)
 
         p_update = None
-
 
         # iterate over score positions
         for on in unique_onsets:
