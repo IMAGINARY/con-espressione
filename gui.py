@@ -239,7 +239,7 @@ class LeapControl(App):
             #                                 post_process_config=config,
             #                                 bm_queue=q_dial)
             self.playback_thread = BMThread('./bm_files/chopin_op10_No3_bm_short.txt',
-                                            midi_port=self.driver,
+                                            driver=self.driver,
                                             post_process_config=post_process_config,
                                             scaler=bm_scaler_knob, vis=[bm_circle_1, bm_circle_2, bm_circle_3,
                                                                         bm_circle_4, bm_circle_5])
