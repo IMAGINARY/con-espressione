@@ -5,7 +5,7 @@ from scipy.interpolate import interp1d
 
 class WormWidget(Widget):
 
-    def __init__(self, th, controller, **kwargs):
+    def __init__(self, th, controller, pos_offset=100, **kwargs):
         super(WormWidget, self).__init__(**kwargs)
 
         self.controller = controller
@@ -21,7 +21,7 @@ class WormWidget(Widget):
 
         self.th = th
         self.size = Window.size
-
+        self.pos_offset = pos_offset
         self.positions_hist = []
 
     def update(self, *args):
@@ -72,5 +72,5 @@ class WormWidget(Widget):
                 cur_size = d - (d / self.max_len_pos) * cur_t
 
                 # draw circle
-                Ellipse(pos=(cur_pos[0] * self.size[0], cur_pos[1] * self.size[1]+100),
+                Ellipse(pos=(cur_pos[0] * self.size[0], cur_pos[1] * self.size[1]+self.pos_offset),
                         size=(cur_size, cur_size))

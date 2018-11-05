@@ -248,6 +248,7 @@ class LeapControl(App):
 
         # worm
         self.worm_widget = WormWidget(self.playback_thread, self.worm_controller,
+                                      pos_offset=100 if self.config['settings']['playmode'] == 'BM' else 0,
                                       size_hint=(1.0, 0.8))
         Clock.schedule_interval(self.worm_widget.update, 0.05)
 
@@ -256,7 +257,9 @@ class LeapControl(App):
         # add widgets to layout
         screen_layout = BoxLayout(orientation='vertical')
         screen_layout.add_widget(self.worm_widget)
-        screen_layout.add_widget(circle_layout)
+
+        if self.config['settings']['playmode'] == 'BM':
+            screen_layout.add_widget(circle_layout)
 
         # add layout to screen
         demo_screen = Screen(name='demo')
