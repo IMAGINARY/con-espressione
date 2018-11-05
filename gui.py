@@ -34,6 +34,7 @@ import queue
 from kivy.config import Config
 from kivy.uix.floatlayout import FloatLayout
 from widgets.knob import Knob
+import platform
 
 Config.set('graphics', 'fullscreen', 0)
 Config.write()
@@ -46,7 +47,7 @@ class LeapControl(App):
         self.worm_controller = None
         self.playback_thread = None
         self.knob_thread = None
-        self.midi_port = None
+        self.driver = None
         self.fn_midi = None
         self.fn_video = os.path.join(os.path.dirname(__file__), 'test.mp4')
 
@@ -81,15 +82,15 @@ class LeapControl(App):
         """Define default config."""
         config.setdefaults('settings', {
             'playmode': 'BM',
-            'midiport': 'Midi Through:Midi Through Port-0 14:0',
+            'driver': 'alsa' if platform.system() == 'Linux' else 'coreaudio',
             'control': 'Mouse',
             'song': 'bach.mid'
         })
 
     def on_config_change(self, config, section, key, value):
         if section == "settings":
-            if key == "midiport":
-                self.midi_port = value
+            if key == "driver":
+                self.driver = value
             if key == 'control':
                 self.worm_controller = self.get_worm_controller()
             if key == 'song':
@@ -105,8 +106,8 @@ class LeapControl(App):
     def get_song_path(self):
         return os.path.join('./midi/', self.config.get('settings', 'song'))
 
-    def get_midi_port(self):
-        return self.config.get('settings', 'midiport')
+    def get_audio_driver(self):
+        return self.config.get('settings', 'driver')
 
     def list_songs(self, file_path='./midi/', file_type='Midi'):
         """Get available songs."""
@@ -124,7 +125,6 @@ class LeapControl(App):
 
     def build_settings(self, settings):
         songs = self.list_songs()
-        ports = mido.get_output_names()
 
         jsondata = """[
                         { "type": "title",
@@ -138,11 +138,11 @@ class LeapControl(App):
                           "options": ["MIDI", "BM"] },
 
                         { "type": "options",
-                          "title": "MidiPort",
-                          "desc": "Select Midi Port",
+                          "title": "AudioDriver",
+                          "desc": "Select Audio Driver",
                           "section": "settings",
-                          "key": "midiport",
-                          "options": %s },
+                          "key": "driver",
+                          "options": ["alsa", "coreaudio"] },
 
                        { "type": "options",
                           "title": "Control",
@@ -158,8 +158,7 @@ class LeapControl(App):
                           "key": "song",
                           "options": %s }
                     ]
-                    """ % (str(ports).replace('\'', '"'),
-                           str([os.path.split(song)[-1] for song in songs]).replace('\'', '"'))
+                    """ % (str([os.path.split(song)[-1] for song in songs]).replace('\'', '"'))
 
         settings.add_json_panel('LeapControl', self.config, data=jsondata)
 
@@ -224,10 +223,10 @@ class LeapControl(App):
         # if self.knob_thread is None:
         self.knob_thread = KnobThread(bm_scaler_knob)
         self.knob_thread.start()
-
+        self.driver = self.get_audio_driver()
         # select playback mode
         if self.config.get('settings', 'playmode') == 'MIDI':
-            self.playback_thread = MidiThread(self.fn_midi, self.midi_port)
+            self.playback_thread = MidiThread(self.fn_midi, self.driver)
         if self.config.get('settings', 'playmode') == 'BM':
             post_process_config = json.load(open('./config_files/chopin_op10_No3.json'))
             # self.playback_thread = BMThread(bm_file,
@@ -240,7 +239,7 @@ class LeapControl(App):
             #                                 post_process_config=config,
             #                                 bm_queue=q_dial)
             self.playback_thread = BMThread('./bm_files/chopin_op10_No3_bm_short.txt',
-                                            midi_port=self.midi_port,
+                                            midi_port=self.driver,
                                             post_process_config=post_process_config,
                                             scaler=bm_scaler_knob, vis=[bm_circle_1, bm_circle_2, bm_circle_3,
                                                                         bm_circle_4, bm_circle_5])

@@ -17,15 +17,15 @@ import queue as Queue
 # import multiprocessing as mp
 
 from basismixer.performance_codec import load_bm_preds
-
+import fluidsynth
 
 class MidiThread(threading.Thread):
-    def __init__(self, midi_path, midi_port):
+    def __init__(self, midi_path, driver='alsa'):
         threading.Thread.__init__(self)
         self.path_midi = midi_path
         self.midi = None
         self.load_midi(self.path_midi)
-        self.midi_port = midi_port
+        self.driver = driver
         self.vel_factor = 1
         self.tempo = 1
         self.play = True
@@ -46,21 +46,30 @@ class MidiThread(threading.Thread):
         self.tempo = tempo
 
     def run(self):
-        outport = mido.open_output(self.midi_port)
+
+        fs = fluidsynth.Synth()
+        fs.start(driver=self.driver)
+        sfid = fs.sfload('./sound_font/grand-piano-YDP-20160804.sf2')
+        fs.program_select(0, sfid, 0, 0)
 
         for msg in self.midi:
             play_msg = msg
+            time.sleep(play_msg.time * self.tempo)
             if msg.type == 'note_on':
                 if msg.velocity != 0:
                     new_vel = int(min(msg.velocity * self.vel_factor, 127))
-
                     play_msg = msg.copy(velocity=new_vel)
 
-            time.sleep(play_msg.time*self.tempo)
-            outport.send(play_msg)
+                fs.noteon(0, play_msg.note, play_msg.velocity)
+
+            # does not seem to be necessary
+            # if msg.type == 'note_on' and msg.velocity == 0:
+            #     fs.noteoff(0, play_msg.note)
 
             if not self.play:
                 break
+
+        fs.delete()
 
         return 0
 

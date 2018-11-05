@@ -1,7 +1,7 @@
 from kivy.uix.widget import Widget
 from kivy.core.window import Window
 from kivy.graphics import Color, Ellipse, Rectangle
-
+from scipy.interpolate import interp1d
 
 class WormWidget(Widget):
 
@@ -15,11 +15,9 @@ class WormWidget(Widget):
         self.max_len_pos = 40
         self.smoothing_factor = 0.3
 
-        # configure tempo factor and velocity range
-        self.tf_min = 0.5
-        self.tf_max = 2.0
-        self.vel_min = 10
-        self.vel_max = 128
+        # configure tempo factor and velocity factor range
+        self.tempo_fnc = interp1d([0, 0.5, 1], [2, 1, 0.5])
+        self.vel_fnc = interp1d([0, 0.5, 1], [0.5, 1, 2])
 
         self.th = th
         self.size = Window.size
@@ -36,13 +34,13 @@ class WormWidget(Widget):
         if pos is None:
             pos = self.positions[0]
 
-        # map position to tempo-factor and velocity
-        cur_tempo_factor = -(self.tf_max - self.tf_min) * pos[0] + 2.0
-        cur_velocity = (self.vel_max - self.vel_min) * pos[1] + self.vel_min
+        # map position to tempo-factor and velocity-factor
+        cur_tempo_factor = self.tempo_fnc(pos[0])
+        cur_velocity_factor = self.vel_fnc(pos[1])
 
         # set the MIDI playback accordingly
         self.th.set_tempo(cur_tempo_factor)
-        self.th.set_velocity(int(cur_velocity))
+        self.th.set_velocity(cur_velocity_factor)
 
         # store current position at the beginning of the list
         self.positions.insert(0, pos)
