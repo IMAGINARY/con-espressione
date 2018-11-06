@@ -15,7 +15,8 @@ import numpy as np
 # import multiprocessing as mp
 
 
-from basismixer.performance_codec import load_bm_preds, PerformanceCodec
+from basismixer.performance_codec import (load_bm_preds, PerformanceCodec,
+                                          get_vis_scaling_factors, compute_vis_scaling)
 import fluidsynth
 
 
@@ -112,6 +113,8 @@ class BMThread(threading.Thread):
                                    init_eq_onset=0.5,
                                    vel_min=self.vel_min,
                                    vel_max=self.vel_max)
+        self.vis_scaling_factors = get_vis_scaling_factors(self. score_dict,
+                                                           self.max_scaler)
 
     def set_velocity(self, vel):
         self.vel = vel * self.velocity_ave
@@ -168,8 +171,10 @@ class BMThread(threading.Thread):
             tim *= controller_p
             lart *= controller_p
 
+            vts, vds, lbprs, tims, larts = compute_vis_scaling(vt, vd, lbpr, tim, lart,
+                                                               self.vis_scaling_factors)
             if self.vis is not None:
-                for vis, scale in zip(self.vis, [vt, vd, lbpr, tim, lart]):
+                for vis, scale in zip(self.vis, [vts, vds, lbprs, tims, larts]):
                     vis.update_widget(scale)
 
                 # Decode parameters to MIDI messages

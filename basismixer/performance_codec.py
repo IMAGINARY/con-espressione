@@ -442,3 +442,61 @@ def compute_dummy_preds_from_midi(filename, outfile, deadpan=False):
                                vel_trend, vel_dev, log_bpr,
                                timing, log_art, melody))
     np.savetxt(outfile, bm_data)
+
+
+def get_vis_scaling_factors(score_dict, max_scaler):
+
+    vel_trend = []
+    vel_dev = []
+    log_bpr = []
+    timing = []
+    log_art = []
+    for on in score_dict:
+        (pitch, ioi, dur,
+         vt, vd, lbpr,
+         tim, lart, mel) = score_dict[on]
+
+        vel_trend.append(vt)
+        vel_dev.append(vd)
+        log_bpr.append(lbpr)
+        timing.append(tim)
+        log_art.append(lart)
+
+    vel_trend = np.array(vel_trend)
+    vel_trend /= vel_trend.mean()
+
+    vel_devc = np.hstack(vel_dev)
+    log_bpr = np.array(log_bpr)
+    timingc = np.hstack(timing)
+    log_artc = np.hstack(log_art)
+
+    vt_max = vel_trend.max() ** max_scaler
+    vt_min = vel_trend.min() ** max_scaler
+
+    vd_max = max_scaler * vel_devc.max()
+    vd_min = max_scaler * vel_devc.min()
+
+    lbpr_max = max_scaler * log_bpr.max()
+    lbpr_min = max_scaler * log_bpr.min()
+
+    tim_max = max_scaler * timingc.max()
+    tim_min = max_scaler * timingc.min()
+
+    lart_max = max_scaler * log_artc.max()
+    lart_min = max_scaler * log_artc.min()
+
+    return (vt_max, vt_min, vd_max, vd_min, lbpr_max, lbpr_min,
+            tim_max, tim_min, lart_max, lart_min)
+
+
+def compute_vis_scaling(vt, vd, lbpr, tim, lart, vis_scaling_factors):
+    (vt_max, vt_min, vd_max, vd_min, lbpr_max, lbpr_min,
+     tim_max, tim_min, lart_max, lart_min) = vis_scaling_factors
+
+    vts = (vt - vt_min) / (vt_max - vt_min)
+    vds = np.mean((vd - vd_min) / (vd_max - vd_min))
+    lbprs = (lbpr - lbpr_min) / (lbpr_max - lbpr_min)
+    tims = np.mean((tim - tim_min) / (tim_max - tim_min))
+    larts = np.mean((lart - lart_min) / (lart_max - lart_min))
+
+    return vts, vds, lbprs, tims, larts
