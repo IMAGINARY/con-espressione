@@ -96,6 +96,8 @@ class BMThread(threading.Thread):
         self.tempo_ave = post_process_config.get(
             'tempo_ave', 60.0 / float(tempo_ave))
 
+        self.velocity_ave = post_process_config.get('velocity_ave',
+                                                    velocity_ave)
         # Minimal and maximal MIDI velocities allowed for each note
         self.vel_min = post_process_config.get('vel_min', vel_min)
         self.vel_max = post_process_config.get('vel_max', vel_max)
@@ -112,7 +114,7 @@ class BMThread(threading.Thread):
                                    vel_max=self.vel_max)
 
     def set_velocity(self, vel):
-        self.vel = vel
+        self.vel = vel * self.velocity_ave
 
     def set_tempo(self, tempo):
         # Scale average tempo
