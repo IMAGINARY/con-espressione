@@ -229,7 +229,7 @@ class LeapControl(App):
         if self.config.get('settings', 'playmode') == 'MIDI':
             self.playback_thread = MidiThread(self.fn_midi, self.midi_port)
         if self.config.get('settings', 'playmode') == 'BM':
-            post_process_config = json.load(open('./config_files/chopin_op10_No3.json'))
+            post_process_config = json.load(open('./config_files/beethoven_op002_no2_mv3.json'))
             # self.playback_thread = BMThread(bm_file,
             #                                 midi_port=self.midi_port,
             #                                 vel_min=vel_min,
@@ -239,7 +239,7 @@ class LeapControl(App):
             #                                 deadpan=deadpan,
             #                                 post_process_config=config,
             #                                 bm_queue=q_dial)
-            self.playback_thread = BMThread('./bm_files/chopin_op10_No3_bm_short.txt',
+            self.playback_thread = BMThread('./bm_files/kuhlau_op88_allegro_burlesco.txt',
                                             midi_port=self.midi_port,
                                             post_process_config=post_process_config,
                                             scaler=bm_scaler_knob, vis=[bm_circle_1, bm_circle_2, bm_circle_3,

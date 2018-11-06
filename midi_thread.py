@@ -3,20 +3,18 @@
 
 TODO
 ----
-* Move decoding procedure to basismixer.performance_codec to make
-BasisMixerMidiThread more modular.
-* Add melody lead.
+* Merge BMThread and MidiThread
 """
 import threading
 import time
 import mido
 import numpy as np
 
-from mido import Message
-import queue as Queue
+# from mido import Message
+# import queue as Queue
 # import multiprocessing as mp
 
-from basismixer.performance_codec import load_bm_preds
+from basismixer.performance_codec import load_bm_preds, PerformanceCodec
 
 
 class MidiThread(threading.Thread):
@@ -72,7 +70,8 @@ class BMThread(threading.Thread):
                  velocity_ave=50,
                  deadpan=False,
                  post_process_config={},
-                 scaler=None, vis=None):
+                 scaler=None, vis=None,
+                 max_scaler=3.0):
         threading.Thread.__init__(self)
 
         self.midi_port = midi_port
@@ -82,16 +81,23 @@ class BMThread(threading.Thread):
         self.score_dict = load_bm_preds(bm_precomputed_path,
                                         deadpan=deadpan,
                                         post_process_config=post_process_config)
-        self.tempo_ave = 60.0 / float(tempo_ave)
+
+        self.tempo_ave = post_process_config.get('tempo_ave', 60.0 / float(tempo_ave))
 
         # Minimal and maximal MIDI velocities allowed for each note
-        self.vel_min = vel_min
-        self.vel_max = vel_max
+        self.vel_min = post_process_config.get('vel_min', vel_min)
+        self.vel_max = post_process_config.get('vel_max', vel_max)
 
         # Controller for the effect of the BM (PowerMate)
         self.scaler = scaler
         print(self.scaler.value)
+        self.max_scaler = max_scaler
         self.vis = vis
+        self.pc = PerformanceCodec(tempo_ave=tempo_ave,
+                                   velocity_ave=velocity_ave,
+                                   init_eq_onset=0.5,
+                                   vel_min=vel_min,
+                                   vel_max=vel_max)
 
     def set_velocity(self, vel):
         self.vel = vel
@@ -107,9 +113,6 @@ class BMThread(threading.Thread):
         # Get unique score positions (and sort them)
         unique_onsets = np.array(list(self.score_dict.keys()))
         unique_onsets.sort()
-
-        # Initialize playback after 0.5 seconds
-        prev_eq_onset = 0.5
 
         # Initial time
         init_time = time.time()
@@ -139,7 +142,7 @@ class BMThread(threading.Thread):
                 p_update = self.scaler.value
 
                 if p_update is not None:
-                    controller_p = 3 * p_update / 100
+                    controller_p = self.max_scaler * p_update / 100
 
                 # Scale parameters
                 vt = vt ** controller_p
@@ -152,56 +155,13 @@ class BMThread(threading.Thread):
                     for vis, scale in zip(self.vis, [vt, vd, lbpr, tim, lart]):
                         vis.update_widget(scale)
 
-                # Compute equivalent onset
-                bp = (2 ** lbpr) * bpr_a
-                eq_onset = prev_eq_onset + bp * ioi
+                # Decode parameters to MIDI messages
+                on_messages, _off_messages = self.pc.decode_online(
+                    pitch=pitch, ioi=ioi, dur=dur, vt=vt,
+                    vd=vd, lbpr=lbpr, tim=tim, lart=lart,
+                    mel=mel, bpr_a=bpr_a, vel_a=vel_a)
 
-                # Compute onset for all notes in the current score position
-                perf_onset = eq_onset + tim
-
-                if np.any(perf_onset < prev_eq_onset):
-                    print('prob onset')
-                    prob_idx = np.where(perf_onset < prev_eq_onset)[0]
-                    perf_onset[prob_idx] = eq_onset
-
-                # Update previous equivalent onset
-                prev_eq_onset = eq_onset
-
-                # indices of the notes in the score position according to
-                # their onset
-                perf_onset_idx = np.argsort(perf_onset)
-
-                # Sort performed onsets
-                perf_onset = perf_onset[perf_onset_idx]
-
-                # Sort pitch
-                pitch = pitch[perf_onset_idx]
-                # Compute performed duration for each note (and sort them)
-                perf_duration = ((2 ** lart) * bp * dur)[perf_onset_idx]
-
-                # Compute performed MIDI velocity for each note (and sort them)
-                perf_vel = np.clip(np.round((vt * vel_a + vd)),
-                                   self.vel_min,
-                                   self.vel_max).astype(np.int)[perf_onset_idx]
-
-                # Initialize list of note on messages
-                on_messages = []
-
-                for p, o, d, v in zip(pitch, perf_onset,
-                                      perf_duration, perf_vel):
-
-                    # Create note on message (the time attribute corresponds to
-                    # the time since the beginning of the piece, not the time
-                    # since the previous message)
-                    on_msg = Message('note_on', velocity=v, note=p, time=o)
-
-                    # Create note off message (the time attribute corresponds
-                    # to the time since the beginning of the piece)
-                    off_msg = Message('note_off', velocity=v, note=p, time=o+d)
-
-                    # Append the messages to their corresponding lists
-                    on_messages.append(on_msg)
-                    off_messages.append(off_msg)
+                off_messages += _off_messages
 
                 # Sort list of note off messages by offset time
                 off_messages.sort(key=lambda x: x.time)

@@ -4,21 +4,240 @@ from the Basis Mixer.
 
 TODO
 ----
-* Move all decoding methods here
-* Add pre-processing of parameters
-* Use only mido for generating dummy bm files from midi (remove dependencies
-from madmom)
 * Add melody lead
 """
 import numpy as np
+from mido import Message
 
 
 def standardize(array):
-    return (array - array.mean()) / (array.std())
+    if not np.isclose(array.std(), 0):
+
+        return (array - array.mean()) / (array.std())
+    else:
+        return (array - array.mean())
 
 
 def minmax_normalize(array):
     return (array - array.min()) / (array.max() - array.min())
+
+
+class PerformanceCodec(object):
+    """Performance Codec
+
+    This class provides methods for decoding a performance to MIDI file.
+    """
+
+    def __init__(self, tempo_ave=55,
+                 velocity_ave=50,
+                 vel_min=30, vel_max=110,
+                 init_eq_onset=0.0):
+        self.vel_min = vel_min
+        self.vel_max = vel_max
+        self.tempo_ave = 60.0 / float(tempo_ave)
+        self.velocity_ave = velocity_ave
+        self.prev_eq_onset = init_eq_onset
+        self.midi_messages = []
+        self._init_eq_onset = init_eq_onset
+        self._bp = self.tempo_ave
+
+    def _decode_step(self, ioi, dur, vt, vd, lbpr,
+                     tim, lart, mel, bpr_a, vel_a):
+        """Compute performed onset, duration and MIDI velocity
+        for the current onset time.
+        Parameters
+        ----------
+        ioi: float
+            Score IOI (in beats)
+        dur : array
+            Notated duration of the notes in beats
+        vt : float
+            MIDI velocity trend ratio corresponding to the current
+            score position.
+        vd : array
+            MIDI velocity deviations of the notes of the currrent
+            score position
+        lbpr : float
+            Log beat period ratio corresponding to the current
+            score position
+        tim : array
+            Timing deviations of the notes of the current score position.
+        lart : array
+            Log articulation ratio of the notes of the current score position.
+        mel : array
+            Melody lead (TODO: add melody lead)
+        bpr_a : float
+            Average beat period corresponding to the current score position.
+        vel_a : float
+            Average MIDI velocity corresponding to the current score position.
+
+        Returns
+        -------
+        perf_onset : array
+            Performed onset time in seconds of the notes in the current score
+            position.
+        perf_duration : array
+            Performed duration in seconds of the notes in the current score
+            position.
+        perf_vel : array
+            Performed MIDI velocity of the notes in the current score position
+        """
+        # Compute equivalent onset
+        bp = (2 ** lbpr) * bpr_a
+
+        eq_onset = self.prev_eq_onset + self._bp * ioi
+
+        self._bp = bp
+        # Compute onset for all notes in the current score position
+        perf_onset = eq_onset - tim
+
+        # Update previous equivalent onset
+        self.prev_eq_onset = eq_onset
+
+        # Compute performed duration for each note
+        perf_duration = ((2 ** lart) * bp * dur)
+
+        # Compute performed MIDI velocity for each note
+        perf_vel = np.clip(np.round(vt * vel_a - vd),
+                           a_min=self.vel_min,
+                           a_max=self.vel_max).astype(np.int)
+        print(perf_vel)
+
+        return perf_onset, perf_duration, perf_vel
+
+    def decode_online(self, pitch, ioi, dur, vt, vd, lbpr,
+                      tim, lart, mel, bpr_a, vel_a):
+        """Decode the expressive performance of the notes at the same
+        score position and output the corresponding MIDI messages.
+
+        This method is designed to be used as part of the `BMThread`
+
+        Parameters
+        ----------
+        ioi: float
+            Score IOI (in beats)
+        dur : array
+            Notated duration of the notes in beats
+        vt : float
+            MIDI velocity trend ratio corresponding to the current
+            score position.
+        vd : array
+            MIDI velocity deviations of the notes of the currrent
+            score position
+        lbpr : float
+            Log beat period ratio corresponding to the current
+            score position
+        tim : array
+            Timing deviations of the notes of the current score position.
+        lart : array
+            Log articulation ratio of the notes of the current score position.
+        mel: array
+            Melody lead
+        bpr_a : float
+            Average beat period corresponding to the current score position.
+        vel_a : float
+            Average MIDI velocity corresponding to the current score position.
+
+        Returns
+        -------
+        on_messages : list
+            List of MIDI messages (as `Message` instances) corresponding to the
+            note on messages
+        off_messages : list
+            List of MIDI messages (as `Message` instances) corresponding to the
+            note off messages
+        """
+
+        # Get perfomed onsets and durations (in seconds) and MIDI velocities
+        (perf_onset, perf_duration, perf_vel) = self._decode_step(ioi=ioi,
+                                                                  dur=dur,
+                                                                  vt=vt,
+                                                                  vd=vd,
+                                                                  lbpr=lbpr,
+                                                                  tim=tim,
+                                                                  lart=lart,
+                                                                  mel=mel,
+                                                                  bpr_a=bpr_a,
+                                                                  vel_a=vel_a)
+        # Indices to sort the notes according to their onset times
+        osix = np.argsort(perf_onset)
+
+        on_messages = []
+        off_messages = []
+
+        for p, o, d, v in zip(pitch[osix], perf_onset[osix],
+                              perf_duration[osix], perf_vel[osix]):
+
+            # Create note on message (the time attribute corresponds to
+            # the time since the beginning of the piece, not the time
+            # since the previous message)
+            print(p, v)
+            on_msg = Message('note_on', velocity=v, note=p, time=o)
+
+            # Create note off message (the time attribute corresponds
+            # to the time since the beginning of the piece)
+            off_msg = Message('note_off', velocity=v, note=p, time=o+d)
+
+            # Append the messages to their corresponding lists
+            on_messages.append(on_msg)
+            off_messages.append(off_msg)
+
+        return on_messages, off_messages
+
+    def decode_offline(self, score_dict, return_s_onsets=False):
+
+        # Get unique score positions (and sort them)
+        unique_onsets = np.array(list(score_dict.keys()))
+        unique_onsets.sort()
+
+        # Iterate over unique onsets
+        pitches = []
+        onsets = []
+        durations = []
+        velocities = []
+        s_onsets = []
+        for on in unique_onsets:
+            (pitch, ioi, dur,
+             vt, vd, lbpr,
+             tim, lart, mel) = score_dict[on]
+
+            (perf_onset, perf_duration, perf_vel) = self._decode_step(
+                ioi=ioi,
+                dur=dur,
+                vt=vt,
+                vd=vd,
+                lbpr=lbpr,
+                tim=tim,
+                lart=lart,
+                mel=mel,
+                bpr_a=self.tempo_ave,
+                vel_a=self.velocity_ave)
+
+            pitches.append(pitch)
+            onsets.append(perf_onset)
+            durations.append(perf_duration)
+            velocities.append(perf_vel)
+            s_onsets.append(np.ones_like(perf_onset) * on)
+
+        pitches = np.hstack(pitches)
+        onsets = np.hstack(onsets)
+        # performance starts at 0
+        onsets -= onsets.min()
+        durations = np.hstack(durations)
+        velocities = np.hstack(velocities)
+        s_onsets = np.hstack(s_onsets)
+
+        note_info = np.column_stack(
+            (pitches, onsets, onsets + durations, velocities))
+        self.reset()
+        if return_s_onsets:
+            return note_info, s_onsets
+        else:
+            return note_info
+
+    def reset(self):
+        self.prev_eq_onset = self._init_eq_onset
+        self._bp = self.tempo_ave
 
 
 def load_bm_preds(filename, deadpan=False, post_process_config={}):
@@ -156,7 +375,6 @@ def _build_score_dict(pitches, onsets, durations, melody,
 
     # Compute IOIs
     iois = np.r_[0, np.diff(unique_onsets)]
-
     # Initialize score dict
     score_dict = dict()
     for on, ioi, ix in zip(unique_onsets, iois, unique_onset_idxs):
