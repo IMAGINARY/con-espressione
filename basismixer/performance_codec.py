@@ -101,8 +101,6 @@ class PerformanceCodec(object):
         perf_vel = np.clip(np.round(vt * vel_a - vd),
                            a_min=self.vel_min,
                            a_max=self.vel_max).astype(np.int)
-        print(perf_vel)
-
         return perf_onset, perf_duration, perf_vel
 
     def decode_online(self, pitch, ioi, dur, vt, vd, lbpr,
@@ -171,7 +169,6 @@ class PerformanceCodec(object):
             # Create note on message (the time attribute corresponds to
             # the time since the beginning of the piece, not the time
             # since the previous message)
-            print(p, v)
             on_msg = Message('note_on', velocity=v, note=p, time=o)
 
             # Create note off message (the time attribute corresponds
