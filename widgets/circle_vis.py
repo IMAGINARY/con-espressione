@@ -31,7 +31,6 @@ class CircleWidget(Widget):
         # Todo remove line if we are sure that we don't want scaling
         # self.ellipse.size = [max(self.size[0] * (scale), 0.01), max(self.size[1] * (scale), 0.01)]
 
-
     def update_ell(self, *args):
         self.ellipse.pos = self.pos
         self.ellipse.size = self.size
