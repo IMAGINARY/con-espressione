@@ -22,6 +22,18 @@ def minmax_normalize(array):
     return (array - array.min()) / (array.max() - array.min())
 
 
+def sigmoid(x):
+    return 1 / (1 + np.exp(-x))
+
+
+def get_unique_onsets(onsets):
+    unique_onsets = np.unique(onsets)
+    unique_onsets.sort()
+    unique_onset_idxs = [np.where(onsets == u)[0] for u in unique_onsets]
+
+    return unique_onsets, unique_onset_idxs
+
+
 class PerformanceCodec(object):
     """Performance Codec
 
@@ -39,7 +51,7 @@ class PerformanceCodec(object):
         self.prev_eq_onset = init_eq_onset
         self.midi_messages = []
         self._init_eq_onset = init_eq_onset
-        self._bp = self.tempo_ave
+        self._lbpr = 0
 
     def _decode_step(self, ioi, dur, vt, vd, lbpr,
                      tim, lart, mel, bpr_a, vel_a):
@@ -83,11 +95,10 @@ class PerformanceCodec(object):
             Performed MIDI velocity of the notes in the current score position
         """
         # Compute equivalent onset
-        bp = (2 ** lbpr) * bpr_a
+        eq_onset = self.prev_eq_onset + ((2 ** self._lbpr) * bpr_a) * ioi
 
-        eq_onset = self.prev_eq_onset + self._bp * ioi
-
-        self._bp = bp
+        self._lbpr = lbpr
+        print(lbpr, self._lbpr, (2 ** self._lbpr) * bpr_a, (2 ** lbpr) * bpr_a)
         # Compute onset for all notes in the current score position
         perf_onset = eq_onset - tim
 
@@ -95,7 +106,7 @@ class PerformanceCodec(object):
         self.prev_eq_onset = eq_onset
 
         # Compute performed duration for each note
-        perf_duration = ((2 ** lart) * bp * dur)
+        perf_duration = ((2 ** lart) * ((2 ** lbpr) * bpr_a) * dur)
 
         # Compute performed MIDI velocity for each note
         perf_vel = np.clip(np.round(vt * vel_a - vd),
@@ -266,17 +277,24 @@ def load_bm_preds(filename, deadpan=False, post_process_config={}):
     # Onsets start at 0
     onsets -= onsets.min()
 
+    unique_onsets, unique_onset_idxs = get_unique_onsets(onsets)
+
     if not deadpan:
         # Performance information (expressive parameters)
 
         # Minmax velocity trend
-        vel_trend = minmax_normalize(bm_data[:, 3])
+        _vel_trend = minmax_normalize(
+            np.array([bm_data[ix, 3].mean() for ix in unique_onset_idxs]))
 
         if 'vel_trend' in post_process_config:
             exag_exp = post_process_config['vel_trend'].get('exag_exp', 1.0)
-            vel_trend = vel_trend ** exag_exp
+            _vel_trend = _vel_trend ** exag_exp
 
-        vel_trend /= vel_trend.mean()
+        _vel_trend /= _vel_trend.mean()
+
+        vel_trend = np.ones(len(bm_data), dtype=np.float)
+        for vt, ix in zip(_vel_trend, unique_onset_idxs):
+            vel_trend[ix] = vt
 
         # Standardize vel_dev
         vel_dev = standardize(bm_data[:, 4])
@@ -287,12 +305,16 @@ def load_bm_preds(filename, deadpan=False, post_process_config={}):
             vel_dev = (vel_dev * vd_std) + vd_mean
 
         # Standardize log_bpr
-        log_bpr = standardize(bm_data[:, 5])
+        _log_bpr = standardize(
+            np.array([bm_data[ix, 5].mean() for ix in unique_onset_idxs]))
         if 'log_bpr' in post_process_config:
             # Rescale and recenter parameters
             lb_std = post_process_config['log_bpr'].get('std', 1.0)
             lb_mean = post_process_config['log_bpr'].get('mean', 0.0)
-            log_bpr = (log_bpr * lb_std) + lb_mean
+            _log_bpr = (_log_bpr * lb_std) + lb_mean
+        log_bpr = np.zeros(len(bm_data), dtype=np.float)
+        for lb, ix in zip(_log_bpr, unique_onset_idxs):
+            log_bpr[ix] = lb
 
         # Standardize timing
         timing = standardize(bm_data[:, 6])
@@ -510,7 +532,3 @@ def compute_vis_scaling(vt, vd, lbpr, tim, lart,
     larts = np.mean(sigmoid(lart))
 
     return vts, vds, lbprs, tims, larts
-
-
-def sigmoid(x):
-    return 1 / (1 + np.exp(-x))

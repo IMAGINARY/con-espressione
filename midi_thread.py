@@ -82,14 +82,15 @@ class BMThread(threading.Thread):
                  velocity_ave=50,
                  deadpan=False,
                  scaler=None, vis=None,
-                 max_scaler=3.0):
+                 max_scaler=2.0):
         threading.Thread.__init__(self)
 
         self.driver = driver
         self.vel = 64
         self.tempo = 1
 
-        self.post_process_config = json.load(open(bm_precomputed_path.replace('.txt', '.json')))
+        self.post_process_config = json.load(
+            open(bm_precomputed_path.replace('.txt', '.json')))
         # Construct score-performance dictionary
         self.score_dict = load_bm_preds(bm_precomputed_path,
                                         deadpan=deadpan,
@@ -99,7 +100,7 @@ class BMThread(threading.Thread):
             'tempo_ave', 60.0 / float(tempo_ave))
 
         self.velocity_ave = self.post_process_config.get('velocity_ave',
-                                                    velocity_ave)
+                                                         velocity_ave)
         # Minimal and maximal MIDI velocities allowed for each note
         self.vel_min = self.post_process_config.get('vel_min', vel_min)
         self.vel_max = self.post_process_config.get('vel_max', vel_max)
