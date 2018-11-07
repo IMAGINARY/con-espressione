@@ -2,6 +2,8 @@ from kivy.uix.widget import Widget
 from kivy.core.window import Window
 from kivy.graphics import Color, Ellipse, Rectangle
 from scipy.interpolate import interp1d
+from kivy.metrics import dp
+
 
 class WormWidget(Widget):
 
@@ -73,4 +75,4 @@ class WormWidget(Widget):
 
                 # draw circle
                 Ellipse(pos=(cur_pos[0] * self.size[0], cur_pos[1] * self.size[1]+self.pos_offset),
-                        size=(cur_size, cur_size))
+                        size=(dp(cur_size), dp(cur_size)))

@@ -8,10 +8,8 @@
 
 ### Mac Specific Stuff
 
-To run the PowerMate button, we need to install `libusb` with homebrew.
-
 ```
-    brew install libusb
+    conda install -c conda-forge fluidsynth
 ```
 
 ## Run

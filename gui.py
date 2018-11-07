@@ -12,6 +12,10 @@ TODO
 import os
 os.environ['KIVY_VIDEO'] = 'ffpyplayer'
 import json
+import mido
+import controller
+import queue
+import platform
 
 from kivy.app import App
 from kivy.clock import Clock
@@ -21,20 +25,17 @@ from kivy.uix.stacklayout import StackLayout
 from kivy.uix.screenmanager import ScreenManager, Screen, SlideTransition
 from kivy.uix.videoplayer import VideoPlayer
 from kivy.graphics import Color
-
+from kivy.metrics import dp
 from kivy.uix.relativelayout import RelativeLayout
-from powermate.knob_thread import KnobThread
-from widgets.worm import WormWidget
-from widgets.circle_vis import CircleWidget
-import mido
-
-from midi_thread import MidiThread, BMThread
-import controller
-import queue
 from kivy.config import Config
 from kivy.uix.floatlayout import FloatLayout
+
+from widgets.worm import WormWidget
+from widgets.circle_vis import CircleWidget
 from widgets.knob import Knob
-import platform
+
+from powermate.knob_thread import KnobThread
+from midi_thread import MidiThread, BMThread
 
 Config.set('graphics', 'fullscreen', 0)
 Config.write()
@@ -199,14 +200,20 @@ class LeapControl(App):
         # visualization
         top = 0.95
         size_hint = (None, None)
+        circle_size = (dp(100), dp(100))
         circle_layout = FloatLayout(size_hint=(1, 0.2))
-        bm_circle_1 = CircleWidget(color=(98/255, 56/255, 101/255), pos_hint={'top': top, 'right': 0.15}, size_hint=size_hint)
-        bm_circle_2 = CircleWidget(color=(87/255, 145/255, 58/255), pos_hint={'top': top, 'right': 0.3}, size_hint=size_hint)
-        bm_circle_3 = CircleWidget(color=(225/255, 155/255, 21/255), pos_hint={'top': top, 'right': 0.45}, size_hint=size_hint)
-        bm_circle_4 = CircleWidget(color=(35/255, 140/255, 17/2552), pos_hint={'top': top, 'right': 0.60}, size_hint=size_hint)
-        bm_circle_5 = CircleWidget(color=(208/255, 8/255, 124/255), pos_hint={'top': top, 'right': 0.75}, size_hint=size_hint)
+        bm_circle_1 = CircleWidget(color=(98/255, 56/255, 101/255), pos_hint={'top': top, 'right': 0.15},
+                                   size_hint=size_hint, size=circle_size)
+        bm_circle_2 = CircleWidget(color=(87/255, 145/255, 58/255), pos_hint={'top': top, 'right': 0.3},
+                                   size_hint=size_hint, size=circle_size)
+        bm_circle_3 = CircleWidget(color=(225/255, 155/255, 21/255), pos_hint={'top': top, 'right': 0.45},
+                                   size_hint=size_hint, size=circle_size)
+        bm_circle_4 = CircleWidget(color=(35/255, 140/255, 17/2552), pos_hint={'top': top, 'right': 0.60},
+                                   size_hint=size_hint, size=circle_size)
+        bm_circle_5 = CircleWidget(color=(208/255, 8/255, 124/255), pos_hint={'top': top, 'right': 0.75},
+                                   size_hint=size_hint, size=circle_size)
 
-        bm_scaler_knob = Knob(pos_hint={'top': 0.95, 'right': 0.95})
+        bm_scaler_knob = Knob(pos_hint={'top': 0.95, 'right': 0.95}, size=circle_size)
         bm_scaler_knob.value = 0
         bm_scaler_knob.max = 100
         bm_scaler_knob.min = 0

@@ -16,4 +16,5 @@ dependencies:
   - pip:
     - mido
     - python-rtmidi
-    - pyusb
+    - ffpyplayer
+    - hidapi
