@@ -12,8 +12,6 @@ class CircleWidget(Widget):
         self.bind(pos=self.update_ell,
                   size=self.update_ell)
 
-
-
     def draw(self):
         with self.canvas:
             # Empty canvas instructions
@@ -25,10 +23,7 @@ class CircleWidget(Widget):
             self.ellipse = Ellipse(pos=self.pos, size=self.size, color=Color(*self.color, 1))
 
     def update_widget(self, scale):
-        print(scale)
-
         scale = np.min(np.atleast_1d(scale))
-
 
         # print(max(self.size[0] * scale, 0.01), max(self.size[1] * scale, 0.01))
         self.ellipse.size = [max(self.size[0] * (scale), 0.01), max(self.size[1] * (scale), 0.01)]
