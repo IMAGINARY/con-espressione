@@ -98,7 +98,7 @@ class PerformanceCodec(object):
         eq_onset = self.prev_eq_onset + ((2 ** self._lbpr) * bpr_a) * ioi
 
         self._lbpr = lbpr
-        print(lbpr, self._lbpr, (2 ** self._lbpr) * bpr_a, (2 ** lbpr) * bpr_a)
+
         # Compute onset for all notes in the current score position
         perf_onset = eq_onset - tim
 
