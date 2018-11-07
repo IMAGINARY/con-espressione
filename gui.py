@@ -4,8 +4,6 @@ Run the Demo
 TODO
 ----
 
-* Add external controller (PowerMate)
-* Add config file for pre-processing BM performance?
 * Improve user interface for setting up the demo
   (before the worm visualization?)
 """
