@@ -18,15 +18,19 @@ class CircleWidget(Widget):
             self.canvas.clear()
 
             # Draw circle
-            Color(0.26, 0.26, 0.26)
-            # Ellipse(pos=self.pos, size=self.size)
-            self.ellipse = Ellipse(pos=self.pos, size=self.size, color=Color(*self.color, 1))
+            Color(*self.color, 1)
+            self.ellipse = Ellipse(pos=self.pos, size=self.size)
 
     def update_widget(self, scale):
         scale = np.min(np.atleast_1d(scale))
 
-        # print(max(self.size[0] * scale, 0.01), max(self.size[1] * scale, 0.01))
-        self.ellipse.size = [max(self.size[0] * (scale), 0.01), max(self.size[1] * (scale), 0.01)]
+        for i in self.canvas.get_group(None):
+            if type(i) is Color:
+                i.a = scale
+                break
+        # Todo remove line if we are sure that we don't want scaling
+        # self.ellipse.size = [max(self.size[0] * (scale), 0.01), max(self.size[1] * (scale), 0.01)]
+
 
     def update_ell(self, *args):
         self.ellipse.pos = self.pos

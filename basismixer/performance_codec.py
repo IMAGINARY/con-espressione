@@ -444,7 +444,7 @@ def compute_dummy_preds_from_midi(filename, outfile, deadpan=False):
     np.savetxt(outfile, bm_data)
 
 
-def get_vis_scaling_factors(score_dict, max_scaler):
+def get_vis_scaling_factors(score_dict, max_scaler, eps=1e-10):
 
     vel_trend = []
     vel_dev = []
@@ -463,7 +463,7 @@ def get_vis_scaling_factors(score_dict, max_scaler):
         log_art.append(lart)
 
     vel_trend = np.array(vel_trend)
-    vel_trend /= vel_trend.mean()
+    # vel_trend /= vel_trend.mean()
 
     vel_devc = np.hstack(vel_dev)
     log_bpr = np.array(log_bpr)
@@ -489,14 +489,28 @@ def get_vis_scaling_factors(score_dict, max_scaler):
             tim_max, tim_min, lart_max, lart_min)
 
 
-def compute_vis_scaling(vt, vd, lbpr, tim, lart, vis_scaling_factors):
+def compute_vis_scaling(vt, vd, lbpr, tim, lart,
+                        vis_scaling_factors, eps=1e-10):
     (vt_max, vt_min, vd_max, vd_min, lbpr_max, lbpr_min,
      tim_max, tim_min, lart_max, lart_min) = vis_scaling_factors
 
-    vts = (vt - vt_min) / (vt_max - vt_min)
-    vds = np.mean((vd - vd_min) / (vd_max - vd_min))
-    lbprs = (lbpr - lbpr_min) / (lbpr_max - lbpr_min)
-    tims = np.mean((tim - tim_min) / (tim_max - tim_min))
-    larts = np.mean((lart - lart_min) / (lart_max - lart_min))
+    # vts = sigmoid(((vt) / (vt_max - vt_min)) ** 3)
+    # vds = sigmoid(np.mean((vd) / (vd_max - vd_min)) ** 3)
+    # lbprs = sigmoid(((lbpr) / (lbpr_max - lbpr_min)) ** 3)
+    # tims = sigmoid(np.mean((tim) / (tim_max - tim_min)) ** 3)
+    # larts = sigmoid(np.mean((lart) / (lart_max - lart_min)) ** 3)
+
+    # TODO:
+    # * Test different scalings of the parameters
+
+    vts = sigmoid(np.log2(vt + eps))
+    vds = np.mean(sigmoid(vd))
+    lbprs = sigmoid(lbpr)
+    tims = np.mean(sigmoid(tim))
+    larts = np.mean(sigmoid(lart))
 
     return vts, vds, lbprs, tims, larts
+
+
+def sigmoid(x):
+    return 1 / (1 + np.exp(-x))

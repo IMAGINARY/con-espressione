@@ -11,11 +11,6 @@ TODO
 """
 import os
 os.environ['KIVY_VIDEO'] = 'ffpyplayer'
-import json
-import mido
-import controller
-import queue
-import platform
 
 from kivy.app import App
 from kivy.clock import Clock
@@ -24,18 +19,19 @@ from kivy.uix.boxlayout import BoxLayout
 from kivy.uix.stacklayout import StackLayout
 from kivy.uix.screenmanager import ScreenManager, Screen, SlideTransition
 from kivy.uix.videoplayer import VideoPlayer
-from kivy.graphics import Color
 from kivy.metrics import dp
-from kivy.uix.relativelayout import RelativeLayout
-from kivy.config import Config
-from kivy.uix.floatlayout import FloatLayout
 
+from powermate.knob_thread import KnobThread
 from widgets.worm import WormWidget
 from widgets.circle_vis import CircleWidget
-from widgets.knob import Knob
 
 from powermate.knob_thread import KnobThread
 from midi_thread import MidiThread, BMThread
+import controller
+from kivy.config import Config
+from kivy.uix.floatlayout import FloatLayout
+from widgets.knob import Knob
+import platform
 
 Config.set('graphics', 'fullscreen', 0)
 Config.write()
@@ -51,12 +47,11 @@ class LeapControl(App):
         self.driver = None
         self.fn_midi = None
         self.fn_video = os.path.join(os.path.dirname(__file__), 'test.mp4')
+        self.config_changed = False
 
     def build(self):
         """Create all GUI items."""
         self.worm_controller = self.get_worm_controller()
-        self.fn_midi = self.get_song_path()
-        self.fn_midi = self.get_song_path()
 
         # basic layout blocks
         self.root = StackLayout()
@@ -85,17 +80,27 @@ class LeapControl(App):
             'playmode': 'BM',
             'driver': 'alsa' if platform.system() == 'Linux' else 'coreaudio',
             'control': 'Mouse',
-            'song': 'bach.mid'
+            'song': 'bach.mid',
+            'bm_file': 'beethoven_op027_no2_mv1_bm_z.txt',
+            'bm_config': 'beethoven_op027_no2_mv1_bm_z.json'
         })
 
     def on_config_change(self, config, section, key, value):
         if section == "settings":
+
             if key == "driver":
                 self.driver = value
             if key == 'control':
                 self.worm_controller = self.get_worm_controller()
-            if key == 'song':
-                self.fn_midi = self.get_song_path()
+
+            self.config_changed = True
+
+    def close_settings(self, *largs):
+        super(LeapControl, self).close_settings(*largs)
+        if self.scm.current == 'demo' and self.config_changed:
+            self.reset_demo_threads()
+            self.screen_demo()
+        self.config_changed = False
 
     def get_worm_controller(self):
         worm_controller = controller.Mouse()
@@ -107,10 +112,13 @@ class LeapControl(App):
     def get_song_path(self):
         return os.path.join('./midi/', self.config.get('settings', 'song'))
 
+    def get_bm_file_path(self):
+        return os.path.join('./bm_files/', self.config.get('settings', 'bm_file'))
+
     def get_audio_driver(self):
         return self.config.get('settings', 'driver')
 
-    def list_songs(self, file_path='./midi/', file_type='Midi'):
+    def list_files(self, file_path='./midi/', file_ending='.mid'):
         """Get available songs."""
         # get available MIDIs
         all_files = [f for f in os.listdir(
@@ -119,27 +127,36 @@ class LeapControl(App):
         files = []
 
         for i, file in enumerate(all_files):
-            if file_type == 'Midi' and '.mid' in file:
+            if file.endswith(file_ending):
                 files.append(os.path.join(file_path, file))
 
         return files
 
+    def reset_demo_threads(self):
+        if self.playback_thread is not None:
+            self.playback_thread.stop_playing()
+        if self.knob_thread is not None:
+            self.knob_thread.stop_reading()
+            self.knob_thread.join()
+
     def build_settings(self, settings):
-        songs = self.list_songs()
+        songs = self.list_files()
+        bm_files = self.list_files(file_path='./bm_files/', file_ending='.txt')
+        self.settings = settings
 
         jsondata = """[
                         { "type": "title",
-                          "title": "LeapControl" },
+                          "title": "General Options" },
 
                         { "type": "options",
-                          "title": "PlayMode",
+                          "title": "Play Mode",
                           "desc": "Use Deadpan Midi or BasisMixer",
                           "section": "settings",
                           "key": "playmode",
                           "options": ["MIDI", "BM"] },
 
                         { "type": "options",
-                          "title": "AudioDriver",
+                          "title": "Audio Driver",
                           "desc": "Select Audio Driver",
                           "section": "settings",
                           "key": "driver",
@@ -151,17 +168,34 @@ class LeapControl(App):
                           "section": "settings",
                           "key": "control",
                           "options": ["Mouse", "LeapMotion"] },
-
+                       { "type": "title",
+                          "title": "Midi Options" },
                        { "type": "options",
                           "title": "Song",
                           "desc": "Select Song",
                           "section": "settings",
                           "key": "song",
+                          "options": %s },
+
+                       { "type": "title",
+                          "title": "BM Options" },
+                      { "type": "options",
+                          "title": "BM File",
+                          "desc": "Select Song for the Basis Mixer",
+                          "section": "settings",
+                          "key": "bm_file",
                           "options": %s }
+
                     ]
-                    """ % (str([os.path.split(song)[-1] for song in songs]).replace('\'', '"'))
+                    """ % (str([os.path.split(song)[-1] for song in songs]).replace('\'', '"'),
+                           str([os.path.split(f)[-1] for f in bm_files]).replace('\'', '"'))
+
+
+
+
 
         settings.add_json_panel('LeapControl', self.config, data=jsondata)
+
 
     def navigation(self):
         navigation = BoxLayout(size_hint=(1.0, 0.1))
@@ -180,12 +214,7 @@ class LeapControl(App):
 
     def screen_intro(self):
         self.scm.current = 'intro'
-
-        if self.playback_thread is not None:
-            self.playback_thread.stop_playing()
-        if self.knob_thread is not None:
-            self.knob_thread.stop_reading()
-            self.knob_thread.join()
+        self.reset_demo_threads()
 
     def screen_demo(self):
         # This is a hack
@@ -233,13 +262,12 @@ class LeapControl(App):
         self.driver = self.get_audio_driver()
         # select playback mode
         if self.config.get('settings', 'playmode') == 'MIDI':
-            self.playback_thread = MidiThread(self.fn_midi, self.driver)
+            self.playback_thread = MidiThread(self.get_song_path(), self.driver)
         if self.config.get('settings', 'playmode') == 'BM':
-            post_process_config = json.load(open('./config_files/beethoven_op027_no2_mv1_bm_z.json'))
 
-            self.playback_thread = BMThread('./bm_files/beethoven_op027_no2_mv1_bm_z.txt',
+
+            self.playback_thread = BMThread(self.get_bm_file_path(),
                                             driver=self.driver,
-                                            post_process_config=post_process_config,
                                             scaler=bm_scaler_knob,
                                             vis=[bm_circle_1, bm_circle_2, bm_circle_3,
                                                  bm_circle_4, bm_circle_5])
@@ -271,15 +299,9 @@ class LeapControl(App):
         self.scm.current = 'demo'
 
     def set_screen(self, screen_name):
-        # self.midi_thread.stop()
         self.scm.current = screen_name
+        self.reset_demo_threads()
 
-        if self.playback_thread is not None:
-            self.playback_thread.stop_playing()
-
-        if self.knob_thread is not None:
-            self.knob_thread.stop_reading()
-            self.knob_thread.join()
 
 
 if __name__ == '__main__':
