@@ -117,6 +117,8 @@ class BMThread(threading.Thread):
         self.vis_scaling_factors = get_vis_scaling_factors(self. score_dict,
                                                            self.max_scaler)
 
+        self.play = True
+
     def set_velocity(self, vel):
         self.vel = vel * self.velocity_ave
 
@@ -190,7 +192,7 @@ class BMThread(threading.Thread):
             off_messages.sort(key=lambda x: x.time)
 
             # Send otuput MIDI messages
-            while len(on_messages) > 0:
+            while len(on_messages) > 0 and self.play:
 
                 # Send note on messages
                 # Get current time
@@ -214,11 +216,20 @@ class BMThread(threading.Thread):
                 # sleep for a little bit...
                 time.sleep(5e-4)
 
+            if not self.play:
+                break
+
         # Send remaining note off messages
-        while len(off_messages) > 0:
+        while len(off_messages) > 0 and self.play:
             current_time = time.time() - init_time
             if current_time >= off_messages[0].time:
                 fs.noteoff(0, off_messages[0].note)
                 del off_messages[0]
 
         fs.delete()
+
+    def start_playing(self):
+        self.play = True
+
+    def stop_playing(self):
+        self.play = False
