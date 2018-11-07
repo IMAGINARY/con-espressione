@@ -11,7 +11,6 @@ TODO
 """
 import os
 os.environ['KIVY_VIDEO'] = 'ffpyplayer'
-import json
 
 from kivy.app import App
 from kivy.clock import Clock
@@ -20,17 +19,13 @@ from kivy.uix.boxlayout import BoxLayout
 from kivy.uix.stacklayout import StackLayout
 from kivy.uix.screenmanager import ScreenManager, Screen, SlideTransition
 from kivy.uix.videoplayer import VideoPlayer
-from kivy.graphics import Color
 
-from kivy.uix.relativelayout import RelativeLayout
 from powermate.knob_thread import KnobThread
 from widgets.worm import WormWidget
 from widgets.circle_vis import CircleWidget
-import mido
 
 from midi_thread import MidiThread, BMThread
 import controller
-import queue
 from kivy.config import Config
 from kivy.uix.floatlayout import FloatLayout
 from widgets.knob import Knob
@@ -84,11 +79,22 @@ class LeapControl(App):
             'playmode': 'BM',
             'driver': 'alsa' if platform.system() == 'Linux' else 'coreaudio',
             'control': 'Mouse',
-            'song': 'bach.mid'
+            'song': 'bach.mid',
+            'bm_file': 'beethoven_op027_no2_mv1_bm_z.txt',
+            'bm_config': 'beethoven_op027_no2_mv1_bm_z.json'
         })
 
     def on_config_change(self, config, section, key, value):
         if section == "settings":
+
+            if key == "playmode":
+                print()
+                tab = list(self.settings.walk(loopback=True))[5]
+                # tab.opacity = 0
+                # tab.disabled = True
+                # self.config[section]['song'].disabled = self.config['settings']['playmode'] == 'BM'
+                pass
+
             if key == "driver":
                 self.driver = value
             if key == 'control':
@@ -106,10 +112,13 @@ class LeapControl(App):
     def get_song_path(self):
         return os.path.join('./midi/', self.config.get('settings', 'song'))
 
+    def get_bm_file_path(self):
+        return os.path.join('./bm_files/', self.config.get('settings', 'bm_file'))
+
     def get_audio_driver(self):
         return self.config.get('settings', 'driver')
 
-    def list_songs(self, file_path='./midi/', file_type='Midi'):
+    def list_files(self, file_path='./midi/', file_ending='.mid'):
         """Get available songs."""
         # get available MIDIs
         all_files = [f for f in os.listdir(
@@ -118,13 +127,15 @@ class LeapControl(App):
         files = []
 
         for i, file in enumerate(all_files):
-            if file_type == 'Midi' and '.mid' in file:
+            if file.endswith(file_ending):
                 files.append(os.path.join(file_path, file))
 
         return files
 
     def build_settings(self, settings):
-        songs = self.list_songs()
+        songs = self.list_files()
+        bm_files = self.list_files(file_path='./bm_files/', file_ending='.txt')
+        self.settings = settings
 
         jsondata = """[
                         { "type": "title",
@@ -156,9 +167,18 @@ class LeapControl(App):
                           "desc": "Select Song",
                           "section": "settings",
                           "key": "song",
+                          "options": %s },
+                          
+                      { "type": "options",
+                          "title": "BM File",
+                          "desc": "Select Song for the basis mixer",
+                          "section": "settings",
+                          "key": "bm_file",
                           "options": %s }
+                      
                     ]
-                    """ % (str([os.path.split(song)[-1] for song in songs]).replace('\'', '"'))
+                    """ % (str([os.path.split(song)[-1] for song in songs]).replace('\'', '"'),
+                           str([os.path.split(f)[-1] for f in bm_files]).replace('\'', '"'))
 
         settings.add_json_panel('LeapControl', self.config, data=jsondata)
 
@@ -228,11 +248,10 @@ class LeapControl(App):
         if self.config.get('settings', 'playmode') == 'MIDI':
             self.playback_thread = MidiThread(self.fn_midi, self.driver)
         if self.config.get('settings', 'playmode') == 'BM':
-            post_process_config = json.load(open('./config_files/beethoven_op027_no2_mv1_bm_z.json'))
 
-            self.playback_thread = BMThread('./bm_files/beethoven_op027_no2_mv1_bm_z.txt',
+
+            self.playback_thread = BMThread(self.get_bm_file_path(),
                                             driver=self.driver,
-                                            post_process_config=post_process_config,
                                             scaler=bm_scaler_knob,
                                             vis=[bm_circle_1, bm_circle_2, bm_circle_3,
                                                  bm_circle_4, bm_circle_5])

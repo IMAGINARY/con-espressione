@@ -9,7 +9,7 @@ import threading
 import time
 import mido
 import numpy as np
-
+import json
 # from mido import Message
 # import queue as Queue
 # import multiprocessing as mp
@@ -81,7 +81,6 @@ class BMThread(threading.Thread):
                  tempo_ave=55,
                  velocity_ave=50,
                  deadpan=False,
-                 post_process_config={},
                  scaler=None, vis=None,
                  max_scaler=3.0):
         threading.Thread.__init__(self)
@@ -89,19 +88,21 @@ class BMThread(threading.Thread):
         self.driver = driver
         self.vel = 64
         self.tempo = 1
+
+        self.post_process_config = json.load(open(bm_precomputed_path.replace('.txt', '.json')))
         # Construct score-performance dictionary
         self.score_dict = load_bm_preds(bm_precomputed_path,
                                         deadpan=deadpan,
-                                        post_process_config=post_process_config)
+                                        post_process_config=self.post_process_config)
 
-        self.tempo_ave = post_process_config.get(
+        self.tempo_ave = self.post_process_config.get(
             'tempo_ave', 60.0 / float(tempo_ave))
 
-        self.velocity_ave = post_process_config.get('velocity_ave',
+        self.velocity_ave = self.post_process_config.get('velocity_ave',
                                                     velocity_ave)
         # Minimal and maximal MIDI velocities allowed for each note
-        self.vel_min = post_process_config.get('vel_min', vel_min)
-        self.vel_max = post_process_config.get('vel_max', vel_max)
+        self.vel_min = self.post_process_config.get('vel_min', vel_min)
+        self.vel_max = self.post_process_config.get('vel_max', vel_max)
 
         # Controller for the effect of the BM (PowerMate)
         self.scaler = scaler
