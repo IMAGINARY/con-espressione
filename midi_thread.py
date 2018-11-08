@@ -15,8 +15,10 @@ import json
 # import multiprocessing as mp
 
 
-from basismixer.performance_codec import (load_bm_preds, PerformanceCodec,
-                                          get_vis_scaling_factors, compute_vis_scaling)
+from basismixer.performance_codec import (load_bm_preds,
+                                          PerformanceCodec,
+                                          get_vis_scaling_factors,
+                                          compute_vis_scaling)
 import fluidsynth
 
 
@@ -107,14 +109,21 @@ class BMThread(threading.Thread):
 
         # Controller for the effect of the BM (PowerMate)
         self.scaler = scaler
-        # print(self.scaler.value)
-        self.max_scaler = max_scaler
+
+        # Maximal amount that the scaling affects the
+        # parameters of the BM
+        self.max_scaler = self.post_process_config.get('max_scaler',
+                                                       max_scaler)
         self.vis = vis
+
+        # Initialize performance codec
         self.pc = PerformanceCodec(tempo_ave=self.tempo_ave,
                                    velocity_ave=velocity_ave,
                                    init_eq_onset=0.5,
                                    vel_min=self.vel_min,
                                    vel_max=self.vel_max)
+
+        # Scaling factors for the visualization
         self.vis_scaling_factors = get_vis_scaling_factors(self. score_dict,
                                                            self.max_scaler)
 

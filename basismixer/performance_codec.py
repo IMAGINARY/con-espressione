@@ -27,8 +27,11 @@ def sigmoid(x):
 
 
 def get_unique_onsets(onsets):
+    # Get unique score positions
     unique_onsets = np.unique(onsets)
     unique_onsets.sort()
+
+    # List of indices corresponding to each of the unique score positions
     unique_onset_idxs = [np.where(onsets == u)[0] for u in unique_onsets]
 
     return unique_onsets, unique_onset_idxs
@@ -387,10 +390,7 @@ def _build_score_dict(pitches, onsets, durations, melody,
          8:melody)
     """
     # Get unique score positions
-    unique_onsets = np.unique(onsets)
-    unique_onsets.sort()
-    # List of indices corresponding to each of the unique score positions
-    unique_onset_idxs = [np.where(onsets == u)[0] for u in unique_onsets]
+    unique_onsets, unique_onset_idxs = get_unique_onsets(onsets)
 
     # Compute IOIs
     iois = np.r_[0, np.diff(unique_onsets)]
