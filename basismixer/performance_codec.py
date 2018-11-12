@@ -9,6 +9,8 @@ TODO
 import numpy as np
 from mido import Message
 
+from bm_utils import remove_trend
+
 
 def standardize(array):
     if not np.isclose(array.std(), 0):
@@ -38,6 +40,7 @@ def get_unique_onsets(onsets):
 
 
 class PerformanceCodec(object):
+
     """Performance Codec
 
     This class provides methods for decoding a performance to MIDI file.
@@ -46,7 +49,9 @@ class PerformanceCodec(object):
     def __init__(self, tempo_ave=55,
                  velocity_ave=50,
                  vel_min=30, vel_max=110,
-                 init_eq_onset=0.0):
+                 init_eq_onset=0.0,
+                 remove_trend_vt=True,
+                 remove_trend_lbpr=True):
         self.vel_min = vel_min
         self.vel_max = vel_max
         self.tempo_ave = 60.0 / float(tempo_ave)
@@ -55,6 +60,8 @@ class PerformanceCodec(object):
         self.midi_messages = []
         self._init_eq_onset = init_eq_onset
         self._lbpr = 0
+        self.remove_trend_vt = remove_trend_vt
+        self.remove_trend_lbpr = remove_trend_lbpr
 
     def _decode_step(self, ioi, dur, vt, vd, lbpr,
                      tim, lart, mel, bpr_a, vel_a):
@@ -112,9 +119,16 @@ class PerformanceCodec(object):
         perf_duration = ((2 ** lart) * ((2 ** lbpr) * bpr_a) * dur)
 
         # Compute performed MIDI velocity for each note
-        perf_vel = np.clip(np.round(vt * vel_a - vd),
-                           a_min=self.vel_min,
-                           a_max=self.vel_max).astype(np.int)
+
+        if self.remove_trend_vt:
+            perf_vel = np.clip(np.round(vel_a - vd - self.velocity_ave * vt),
+                               a_min=self.vel_min,
+                               a_max=self.vel_max).astype(np.int)
+        else:
+            perf_vel = np.clip(np.round(vt * vel_a - vd),
+                               a_min=self.vel_min,
+                               a_max=self.vel_max).astype(np.int)
+
         return perf_onset, perf_duration, perf_vel
 
     def decode_online(self, pitch, ioi, dur, vt, vd, lbpr,
@@ -187,7 +201,7 @@ class PerformanceCodec(object):
 
             # Create note off message (the time attribute corresponds
             # to the time since the beginning of the piece)
-            off_msg = Message('note_off', velocity=v, note=p, time=o+d)
+            off_msg = Message('note_off', velocity=v, note=p, time=o + d)
 
             # Append the messages to their corresponding lists
             on_messages.append(on_msg)
@@ -292,8 +306,17 @@ def load_bm_preds(filename, deadpan=False, post_process_config={}):
         if 'vel_trend' in post_process_config:
             exag_exp = post_process_config['vel_trend'].get('exag_exp', 1.0)
             _vel_trend = _vel_trend ** exag_exp
+            remove_trend_vt = post_process_config['vel_trend'].get(
+                'remove_trend', True)
+        else:
+            remove_trend_vt = True
 
-        _vel_trend /= _vel_trend.mean()
+        if remove_trend_vt:
+            print('Filtering velocity')
+            _vt_mean = _vel_trend.mean()
+            _vel_trend = remove_trend(_vel_trend, unique_onsets) / _vt_mean
+        else:
+            _vel_trend /= _vel_trend.mean()
 
         vel_trend = np.ones(len(bm_data), dtype=np.float)
         for vt, ix in zip(_vel_trend, unique_onset_idxs):
@@ -308,13 +331,25 @@ def load_bm_preds(filename, deadpan=False, post_process_config={}):
             vel_dev = (vel_dev * vd_std) + vd_mean
 
         # Standardize log_bpr
-        _log_bpr = standardize(
-            np.array([bm_data[ix, 5].mean() for ix in unique_onset_idxs]))
+        _log_bpr = np.array([bm_data[ix, 5].mean()
+                            for ix in unique_onset_idxs])
         if 'log_bpr' in post_process_config:
             # Rescale and recenter parameters
             lb_std = post_process_config['log_bpr'].get('std', 1.0)
             lb_mean = post_process_config['log_bpr'].get('mean', 0.0)
+            remove_trend_lbpr = post_process_config['log_bpr'].get(
+                'remove_trend', True)
+
+            if remove_trend_lbpr:
+                _log_bpr = standardize(remove_trend(_log_bpr, unique_onsets))
+            else:
+                _log_bpr = standardize(_log_bpr)
+
             _log_bpr = (_log_bpr * lb_std) + lb_mean
+
+        else:
+            _log_bpr = remove_trend(_log_bpr, unique_onsets)
+
         log_bpr = np.zeros(len(bm_data), dtype=np.float)
         for lb, ix in zip(_log_bpr, unique_onset_idxs):
             log_bpr[ix] = lb
