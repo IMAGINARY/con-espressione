@@ -1,25 +1,17 @@
 """
     Threading class for MIDI playback.
-
-TODO
-----
-* Merge BMThread and MidiThread
 """
 import threading
 import time
 import mido
 import numpy as np
 import json
-# from mido import Message
-# import queue as Queue
-# import multiprocessing as mp
-
+import fluidsynth
 
 from basismixer.performance_codec import (load_bm_preds,
-                                          PerformanceCodec,
-                                          get_vis_scaling_factors,
-                                          compute_vis_scaling)
-import fluidsynth
+                                          PerformanceCodec)
+from basismixer.bm_utils import (get_vis_scaling_factors,
+                                 compute_vis_scaling)
 
 
 class MidiThread(threading.Thread):
@@ -119,23 +111,24 @@ class BMThread(threading.Thread):
         self.vis = vis
 
         if 'vel_trend' in self.post_process_config:
-            remove_trend_vt = self.post_process_config.get(
+            self.remove_trend_vt = self.post_process_config['vel_trend'].get(
                 'remove_trend', True)
         else:
-            remove_trend_vt = True
+            self.remove_trend_vt = True
 
         if 'log_bpr' in self.post_process_config:
-            remove_trend_lbpr = self.post_process_config('remove_trend', True)
+            self.remove_trend_lbpr = self.post_process_config['log_bpr'].get(
+                'remove_trend', True)
         else:
-            remove_trend_lbpr = True
+            self.remove_trend_lbpr = True
         # Initialize performance codec
         self.pc = PerformanceCodec(tempo_ave=self.tempo_ave,
                                    velocity_ave=velocity_ave,
                                    init_eq_onset=0.5,
                                    vel_min=self.vel_min,
                                    vel_max=self.vel_max,
-                                   remove_trend_vt=remove_trend_vt,
-                                   remove_trend_lbpr=remove_trend_lbpr)
+                                   remove_trend_vt=self.remove_trend_vt,
+                                   remove_trend_lbpr=self.remove_trend_lbpr)
 
         # Scaling factors for the visualization
         self.vis_scaling_factors = get_vis_scaling_factors(self. score_dict,
@@ -192,15 +185,17 @@ class BMThread(threading.Thread):
                 controller_p = self.max_scaler * p_update / 100
 
             # Scale parameters
-            vt = vt ** controller_p
+            if self.remove_trend_vt:
+                vt *= controller_p
+            else:
+                vt = vt ** controller_p
             vd *= controller_p
             lbpr *= controller_p
             tim *= controller_p
             lart *= controller_p
 
             vts, vds, lbprs, tims, larts = compute_vis_scaling(
-                vt, vd, lbpr, tim, lart,
-                                                               self.vis_scaling_factors)
+                vt, vd, lbpr, tim, lart, self.vis_scaling_factors)
             if self.vis is not None:
                 for vis, scale in zip(self.vis, [vts, vds, lbprs, tims, larts]):
                     vis.update_widget(scale)

@@ -9,23 +9,9 @@ TODO
 import numpy as np
 from mido import Message
 
-from bm_utils import remove_trend
-
-
-def standardize(array):
-    if not np.isclose(array.std(), 0):
-
-        return (array - array.mean()) / (array.std())
-    else:
-        return (array - array.mean())
-
-
-def minmax_normalize(array):
-    return (array - array.min()) / (array.max() - array.min())
-
-
-def sigmoid(x):
-    return 1 / (1 + np.exp(-x))
+from basismixer.bm_utils import (remove_trend,
+                                 standardize,
+                                 minmax_normalize)
 
 
 def get_unique_onsets(onsets):
@@ -312,7 +298,6 @@ def load_bm_preds(filename, deadpan=False, post_process_config={}):
             remove_trend_vt = True
 
         if remove_trend_vt:
-            print('Filtering velocity')
             _vt_mean = _vel_trend.mean()
             _vel_trend = remove_trend(_vel_trend, unique_onsets) / _vt_mean
         else:
@@ -332,7 +317,7 @@ def load_bm_preds(filename, deadpan=False, post_process_config={}):
 
         # Standardize log_bpr
         _log_bpr = np.array([bm_data[ix, 5].mean()
-                            for ix in unique_onset_idxs])
+                             for ix in unique_onset_idxs])
         if 'log_bpr' in post_process_config:
             # Rescale and recenter parameters
             lb_std = post_process_config['log_bpr'].get('std', 1.0)
@@ -341,11 +326,10 @@ def load_bm_preds(filename, deadpan=False, post_process_config={}):
                 'remove_trend', True)
 
             if remove_trend_lbpr:
-                _log_bpr = standardize(remove_trend(_log_bpr, unique_onsets))
+                _log_bpr = remove_trend(_log_bpr, unique_onsets) * lb_std
             else:
                 _log_bpr = standardize(_log_bpr)
-
-            _log_bpr = (_log_bpr * lb_std) + lb_mean
+                _log_bpr = (_log_bpr * lb_std) + lb_mean
 
         else:
             _log_bpr = remove_trend(_log_bpr, unique_onsets)
@@ -499,71 +483,3 @@ def compute_dummy_preds_from_midi(filename, outfile, deadpan=False):
                                vel_trend, vel_dev, log_bpr,
                                timing, log_art, melody))
     np.savetxt(outfile, bm_data)
-
-
-def get_vis_scaling_factors(score_dict, max_scaler, eps=1e-10):
-
-    vel_trend = []
-    vel_dev = []
-    log_bpr = []
-    timing = []
-    log_art = []
-    for on in score_dict:
-        (pitch, ioi, dur,
-         vt, vd, lbpr,
-         tim, lart, mel) = score_dict[on]
-
-        vel_trend.append(vt)
-        vel_dev.append(vd)
-        log_bpr.append(lbpr)
-        timing.append(tim)
-        log_art.append(lart)
-
-    vel_trend = np.array(vel_trend)
-    # vel_trend /= vel_trend.mean()
-
-    vel_devc = np.hstack(vel_dev)
-    log_bpr = np.array(log_bpr)
-    timingc = np.hstack(timing)
-    log_artc = np.hstack(log_art)
-
-    vt_max = vel_trend.max() ** max_scaler
-    vt_min = vel_trend.min() ** max_scaler
-
-    vd_max = max_scaler * vel_devc.max()
-    vd_min = max_scaler * vel_devc.min()
-
-    lbpr_max = max_scaler * log_bpr.max()
-    lbpr_min = max_scaler * log_bpr.min()
-
-    tim_max = max_scaler * timingc.max()
-    tim_min = max_scaler * timingc.min()
-
-    lart_max = max_scaler * log_artc.max()
-    lart_min = max_scaler * log_artc.min()
-
-    return (vt_max, vt_min, vd_max, vd_min, lbpr_max, lbpr_min,
-            tim_max, tim_min, lart_max, lart_min)
-
-
-def compute_vis_scaling(vt, vd, lbpr, tim, lart,
-                        vis_scaling_factors, eps=1e-10):
-    (vt_max, vt_min, vd_max, vd_min, lbpr_max, lbpr_min,
-     tim_max, tim_min, lart_max, lart_min) = vis_scaling_factors
-
-    # vts = sigmoid(((vt) / (vt_max - vt_min)) ** 3)
-    # vds = sigmoid(np.mean((vd) / (vd_max - vd_min)) ** 3)
-    # lbprs = sigmoid(((lbpr) / (lbpr_max - lbpr_min)) ** 3)
-    # tims = sigmoid(np.mean((tim) / (tim_max - tim_min)) ** 3)
-    # larts = sigmoid(np.mean((lart) / (lart_max - lart_min)) ** 3)
-
-    # TODO:
-    # * Test different scalings of the parameters
-
-    vts = sigmoid(np.log2(vt + eps))
-    vds = np.mean(sigmoid(vd))
-    lbprs = sigmoid(lbpr)
-    tims = np.mean(sigmoid(tim))
-    larts = np.mean(sigmoid(lart))
-
-    return vts, vds, lbprs, tims, larts

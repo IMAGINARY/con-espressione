@@ -9,7 +9,8 @@ import time
 from mido import Message
 
 from basismixer.performance_codec import (load_bm_preds,
-                                          compute_dummy_preds_from_midi)
+                                          compute_dummy_preds_from_midi,
+                                          get_unique_onsets)
 
 
 class DummyController(object):
@@ -119,6 +120,27 @@ def test_dummy_performance_generation():
                 outport.send(off_messages[0])
                 print(off_messages[0])
                 del off_messages[0]
+
+
+def test_remove_trend():
+    import matplotlib.pyplot as plt
+    from basismixer.bm_utils import remove_trend
+    fn = '../bm_files/chopin_op10_No3_bm_magaloff.txt'
+    bm_data = np.loadtxt(fn)
+    onsets = bm_data[:, 1]
+    unique_onsets, unique_onset_idxs = get_unique_onsets(onsets)
+
+    vel_trend = np.array([bm_data[ix, 3].mean() for ix in unique_onset_idxs])
+    vt_trendless, vt_smoothed = remove_trend(vel_trend, unique_onsets, 'savgol',
+                                             return_smoothed_param=True)
+    x = unique_onsets
+    y = vel_trend
+    yhat = vt_smoothed
+
+    plt.plot(x, y / vel_trend.mean())
+    plt.plot(x, yhat / vel_trend.mean(), color='red')
+    plt.plot(x, vt_trendless / vel_trend.mean(), color='black')
+    plt.show()
 
 
 if __name__ == '__main__':
