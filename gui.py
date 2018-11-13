@@ -19,11 +19,10 @@ from kivy.uix.screenmanager import ScreenManager, Screen, SlideTransition
 from kivy.uix.videoplayer import VideoPlayer
 from kivy.metrics import dp
 
-from powermate.knob_thread import KnobThread
+from powermate.knob_thread import (KnobThread, MidiKnobThread)
 from widgets.worm import WormWidget
 from widgets.circle_vis import CircleWidget
 
-from powermate.knob_thread import KnobThread
 from midi_thread import MidiThread, BMThread
 import controller
 from kivy.config import Config
@@ -53,7 +52,8 @@ class LeapControl(App):
 
         # basic layout blocks
         self.root = StackLayout()
-        self.scm = ScreenManager(transition=SlideTransition(), size_hint=(1.0, 0.9))
+        self.scm = ScreenManager(
+            transition=SlideTransition(), size_hint=(1.0, 0.9))
         self.root.add_widget(self.scm)
 
         # Navigation
@@ -80,7 +80,8 @@ class LeapControl(App):
             'control': 'Mouse',
             'song': 'bach.mid',
             'bm_file': 'beethoven_op027_no2_mv1_bm_z.txt',
-            'bm_config': 'beethoven_op027_no2_mv1_bm_z.json'
+            'bm_config': 'beethoven_op027_no2_mv1_bm_z.json',
+            'knob_type': 'PowerMate'
         })
 
     def on_config_change(self, config, section, key, value):
@@ -182,18 +183,23 @@ class LeapControl(App):
                           "desc": "Select Song for the Basis Mixer",
                           "section": "settings",
                           "key": "bm_file",
-                          "options": %s }
+                          "options": %s },
+
+                      {"type":"title",
+                       "title": "Knob Control"},
+                      {"type": "options",
+                       "title": "Knob Device",
+                       "desc": "Use PowerMate or nanoKONTROL 2",
+                       "key": "knob_type",
+                       "section": "settings",
+                       "options": ["PowerMate", "nanoKONTROL 2"]
+                      }
 
                     ]
                     """ % (str([os.path.split(song)[-1] for song in songs]).replace('\'', '"'),
                            str([os.path.split(f)[-1] for f in bm_files]).replace('\'', '"'))
 
-
-
-
-
         settings.add_json_panel('LeapControl', self.config, data=jsondata)
-
 
     def navigation(self):
         navigation = BoxLayout(size_hint=(1.0, 0.1))
@@ -240,7 +246,8 @@ class LeapControl(App):
         bm_circle_5 = CircleWidget(color=(208/255, 8/255, 124/255), pos_hint={'top': top, 'right': 0.75},
                                    size_hint=size_hint, size=circle_size)
 
-        bm_scaler_knob = Knob(pos_hint={'top': 0.95, 'right': 0.95}, size=circle_size)
+        bm_scaler_knob = Knob(
+            pos_hint={'top': 0.95, 'right': 0.95}, size=circle_size)
         bm_scaler_knob.value = 0
         bm_scaler_knob.max = 100
         bm_scaler_knob.min = 0
@@ -255,14 +262,17 @@ class LeapControl(App):
         circle_layout.add_widget(bm_scaler_knob)
 
         # if self.knob_thread is None:
-        self.knob_thread = KnobThread(bm_scaler_knob)
+        if self.config.get('settings', 'knob_type') == 'PowerMate':
+            self.knob_thread = KnobThread(bm_scaler_knob)
+        elif self.config.get('settings', 'knob_type') == 'nanoKONTROL 2':
+            self.knob_thread = MidiKnobThread(bm_scaler_knob)
         self.knob_thread.start()
         self.driver = self.get_audio_driver()
         # select playback mode
         if self.config.get('settings', 'playmode') == 'MIDI':
-            self.playback_thread = MidiThread(self.get_song_path(), self.driver)
+            self.playback_thread = MidiThread(
+                self.get_song_path(), self.driver)
         if self.config.get('settings', 'playmode') == 'BM':
-
 
             self.playback_thread = BMThread(self.get_bm_file_path(),
                                             driver=self.driver,
@@ -299,7 +309,6 @@ class LeapControl(App):
     def set_screen(self, screen_name):
         self.scm.current = screen_name
         self.reset_demo_threads()
-
 
 
 if __name__ == '__main__':
