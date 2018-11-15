@@ -21,7 +21,8 @@ from kivy.metrics import dp
 
 from powermate.knob_thread import (KnobThread, MidiKnobThread)
 from widgets.worm import WormWidget
-from widgets.circle_vis import CircleWidget
+# from widgets.circle_vis import CircleWidget
+from widgets.rect_vis import RectangleWidget
 
 from midi_thread import MidiThread, BMThread
 import controller
@@ -231,23 +232,36 @@ class LeapControl(App):
                 break
 
         # visualization
-        top = 0.95
+        top = 1.2
         size_hint = (None, None)
         circle_size = (dp(100), dp(100))
+
+        rect_size = (dp(75), dp(100))
         circle_layout = FloatLayout(size_hint=(1, 0.2))
-        bm_circle_1 = CircleWidget(color=(98/255, 56/255, 101/255), pos_hint={'top': top, 'right': 0.15},
-                                   size_hint=size_hint, size=circle_size)
-        bm_circle_2 = CircleWidget(color=(87/255, 145/255, 58/255), pos_hint={'top': top, 'right': 0.3},
-                                   size_hint=size_hint, size=circle_size)
-        bm_circle_3 = CircleWidget(color=(225/255, 155/255, 21/255), pos_hint={'top': top, 'right': 0.45},
-                                   size_hint=size_hint, size=circle_size)
-        bm_circle_4 = CircleWidget(color=(35/255, 140/255, 17/2552), pos_hint={'top': top, 'right': 0.60},
-                                   size_hint=size_hint, size=circle_size)
-        bm_circle_5 = CircleWidget(color=(208/255, 8/255, 124/255), pos_hint={'top': top, 'right': 0.75},
-                                   size_hint=size_hint, size=circle_size)
+        # bm_circle_1 = CircleWidget(color=(98/255, 56/255, 101/255), pos_hint={'top': top, 'right': 0.15},
+        #                            size_hint=size_hint, size=circle_size)
+        # bm_circle_2 = CircleWidget(color=(87/255, 145/255, 58/255), pos_hint={'top': top, 'right': 0.3},
+        #                            size_hint=size_hint, size=circle_size)
+        # bm_circle_3 = CircleWidget(color=(225/255, 155/255, 21/255), pos_hint={'top': top, 'right': 0.45},
+        #                            size_hint=size_hint, size=circle_size)
+        # bm_circle_4 = CircleWidget(color=(35/255, 140/255, 17/2552), pos_hint={'top': top, 'right': 0.60},
+        #                            size_hint=size_hint, size=circle_size)
+        # bm_circle_5 = CircleWidget(color=(208/255, 8/255, 124/255), pos_hint={'top': top, 'right': 0.75},
+        #                            size_hint=size_hint, size=circle_size)
+
+        bm_circle_1 = RectangleWidget(name='Loudness', color=(98/255, 56/255, 101/255),
+                                      pos_hint={'top': top, 'right': 0.15}, size_hint=size_hint, size=rect_size)
+        bm_circle_2 = RectangleWidget(name='Dynamic Spread', color=(87/255, 145/255, 58/255),
+                                      pos_hint={'top': top, 'right': 0.3}, size_hint=size_hint, size=rect_size)
+        bm_circle_3 = RectangleWidget(name='Tempo', color=(225/255, 155/255, 21/255),
+                                      pos_hint={'top': top, 'right': 0.45}, size_hint=size_hint, size=rect_size)
+        bm_circle_4 = RectangleWidget(name='Microtiming', color=(35/255, 140/255, 17/2552),
+                                      pos_hint={'top': top, 'right': 0.60}, size_hint=size_hint, size=rect_size)
+        bm_circle_5 = RectangleWidget(name='Articulation', color=(208/255, 8/255, 124/255),
+                                      pos_hint={'top': top, 'right': 0.75}, size_hint=size_hint, size=rect_size)
 
         bm_scaler_knob = Knob(
-            pos_hint={'top': 0.95, 'right': 0.95}, size=circle_size)
+            pos_hint={'top': top, 'right': 0.95}, size=circle_size)
         bm_scaler_knob.value = 0
         bm_scaler_knob.max = 100
         bm_scaler_knob.min = 0
