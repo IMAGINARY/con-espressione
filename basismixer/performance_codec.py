@@ -13,6 +13,8 @@ from basismixer.bm_utils import (remove_trend,
                                  standardize,
                                  minmax_normalize)
 
+from basismixer.expression_tools import melody_lead, melody_lead_dyn
+
 
 def get_unique_onsets(onsets):
     # Get unique score positions
@@ -50,7 +52,7 @@ class PerformanceCodec(object):
         self.remove_trend_lbpr = remove_trend_lbpr
 
     def _decode_step(self, ioi, dur, vt, vd, lbpr,
-                     tim, lart, mel, bpr_a, vel_a):
+                     tim, lart, mel, bpr_a, vel_a, pitch):
         """Compute performed onset, duration and MIDI velocity
         for the current onset time.
         Parameters
@@ -78,6 +80,8 @@ class PerformanceCodec(object):
             Average beat period corresponding to the current score position.
         vel_a : float
             Average MIDI velocity corresponding to the current score position.
+        pitch : array
+           Pitch of the notes in the current score position
 
         Returns
         -------
@@ -95,8 +99,10 @@ class PerformanceCodec(object):
 
         self._lbpr = lbpr
 
+        tim_ml = melody_lead(pitch, vel_a) * mel
+
         # Compute onset for all notes in the current score position
-        perf_onset = eq_onset - tim
+        perf_onset = eq_onset - tim - tim_ml
 
         # Update previous equivalent onset
         self.prev_eq_onset = eq_onset
@@ -107,7 +113,11 @@ class PerformanceCodec(object):
         # Compute performed MIDI velocity for each note
 
         if self.remove_trend_vt:
-            perf_vel = np.clip(np.round(vel_a - vd - self.velocity_ave * vt),
+            _perf_vel = vel_a - vd - self.velocity_ave * vt
+            _perf_vel[mel.astype(bool)] = np.maximum(
+                _perf_vel.max(),
+                melody_lead_dyn(mel, _perf_vel, vel_a))
+            perf_vel = np.clip(np.round(_perf_vel),
                                a_min=self.vel_min,
                                a_max=self.vel_max).astype(np.int)
         else:
@@ -170,7 +180,8 @@ class PerformanceCodec(object):
                                                                   lart=lart,
                                                                   mel=mel,
                                                                   bpr_a=bpr_a,
-                                                                  vel_a=vel_a)
+                                                                  vel_a=vel_a,
+                                                                  pitch=pitch)
         # Indices to sort the notes according to their onset times
         osix = np.argsort(perf_onset)
 

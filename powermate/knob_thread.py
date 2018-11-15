@@ -58,7 +58,7 @@ class MidiKnobThread(Thread):
 
         try:
             self.inport = mido.open_input(self.midi_port)
-        except RuntimeError:
+        except:
             self.inport = None
             print('Invalid MIDI port')
 
