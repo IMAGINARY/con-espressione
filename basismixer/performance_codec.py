@@ -89,10 +89,8 @@ class PerformanceCodec(object):
 
         self._lbpr = lbpr
 
-        # tim_ml = melody_lead(pitch, vel_a) * mel
-
         # Compute onset for all notes in the current score position
-        perf_onset = eq_onset - tim  # - tim_ml
+        perf_onset = eq_onset - tim
 
         # Update previous equivalent onset
         self.prev_eq_onset = eq_onset
@@ -104,9 +102,6 @@ class PerformanceCodec(object):
 
         if self.remove_trend_vt:
             _perf_vel = vel_a - vd - self.velocity_ave * vt
-            # _perf_vel[mel.astype(bool)] = np.maximum(
-            #     _perf_vel.max(),
-            #     melody_lead_dyn(mel, _perf_vel, vel_a))
             perf_vel = np.clip(np.round(_perf_vel),
                                a_min=self.vel_min,
                                a_max=self.vel_max).astype(np.int)

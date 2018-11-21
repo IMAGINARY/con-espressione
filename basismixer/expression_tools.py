@@ -31,7 +31,7 @@ def scale_parameters(vt, vd, lbpr, tim, lart, pitch,
 
     # add dynamics melody lead
     if mel.sum() > 0:
-        vd[mel.astype(bool)] = np.minimum(0, vd.min() * 0.9)
+        vd[mel.astype(bool)] = np.minimum(vd.min() * 0.8, - 0.2 * vel_a)
 
     # Scale parameters
     if remove_trend_vt:

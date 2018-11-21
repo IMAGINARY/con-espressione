@@ -226,6 +226,7 @@ if __name__ == '__main__':
     on_messages = []
     off_messages = []
     ped_messages = []
+    currently_sounding_pitches = []
     for on in unique_onsets:
         # Get score and performance info
         (pitch, ioi, dur,
@@ -254,7 +255,28 @@ if __name__ == '__main__':
         current_time = time.time() - init_time
 
         if current_time >= midi_messages[0].time:
+
+            if midi_messages[0].type == 'note_on':
+                if midi_messages[0].note in currently_sounding_pitches:
+                    csp_ix = currently_sounding_pitches.index(
+                        midi_messages[0].note)
+                    del currently_sounding_pitches[csp_ix]
+                    for noi, msg in enumerate(midi_messages):
+                        if msg.type == 'note_off':
+                            if msg.note == midi_messages[0].note:
+                                port.send(msg)
+                                print('deleted', msg)
+                                del midi_messages[noi]
+
+                                break
+                currently_sounding_pitches.append(midi_messages[0].note)
+
             port.send(midi_messages[0])
+            if midi_messages[0].type == 'note_off':
+                if midi_messages[0].note in currently_sounding_pitches:
+                    csp_ix = currently_sounding_pitches.index(
+                        midi_messages[0].note)
+                    del currently_sounding_pitches[csp_ix]
             del midi_messages[0]
 
         time.sleep(1e-4)

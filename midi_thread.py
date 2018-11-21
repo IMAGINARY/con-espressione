@@ -166,6 +166,7 @@ class BMThread(threading.Thread):
         # Initialize list for note off messages
         off_messages = []
         ped_messages = []
+        currently_sounding = []
 
         # Initialize controller scaling
         controller_p = 1.0
@@ -195,7 +196,7 @@ class BMThread(threading.Thread):
                 controller_p = self.max_scaler * p_update / 100
 
             if vt is not None:
-
+                # Scale bm parameters
                 vt, vd, lbpr, tim, lart, ped, mel = scale_parameters(
                     vt=vt, vd=vd, lbpr=lbpr,
                     tim=tim, lart=lart, pitch=pitch,
@@ -237,6 +238,11 @@ class BMThread(threading.Thread):
                     # Update current time
                     current_time = time.time() - init_time
                     if current_time >= off_messages[0].time:
+                        # Update list of currently sounding notes
+                        if off_messages[0].note in currently_sounding:
+                            csp_ix = currently_sounding.index(
+                                off_messages[0].note)
+                            del currently_sounding[csp_ix]
                         # Send current note off message
                         fs.noteoff(0, off_messages[0].note)
                         # delete note off message from the list
@@ -246,9 +252,22 @@ class BMThread(threading.Thread):
                 if len(on_messages) > 0:
                     current_time = time.time() - init_time
                     if current_time >= on_messages[0].time:
+                        # Check if note is currently on and send a
+                        # note off message (and update off_messages
+                        # in case it is active.
+                        if on_messages[0].note in currently_sounding:
+                            csp_ix = currently_sounding.index(
+                                on_messages[0].note)
+                            del currently_sounding[csp_ix]
+                            for noi, nomsg in enumerate(off_messages):
+                                if nomsg.note == on_messages[0].note:
+                                    fs.noteoff(0, on_messages[0].note)
+                                    del off_messages[noi]
+                                    break
                         # Send current note on message
                         fs.noteon(0, on_messages[0].note,
                                   on_messages[0].velocity)
+                        currently_sounding.append(on_messages[0].note)
                         # delete note on message from the list
                         del on_messages[0]
 
