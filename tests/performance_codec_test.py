@@ -143,6 +143,120 @@ def test_remove_trend():
     plt.show()
 
 
+def test_pedal():
+    import json
+    from basismixer.performance_codec import PerformanceCodec
+    fn = '../bm_files/beethoven_op027_no2_mv1_bm_of_wm.txt'
+    config_fn = fn.replace('.txt', '.json')
+    pedal_fn = fn.replace('.txt', '.pedal')
+
+    config = json.load(open(config_fn))
+
+    score = load_bm_preds(filename=fn, post_process_config=config,
+                          pedal_fn=pedal_fn)
+
+    pc = PerformanceCodec(tempo_ave=60. / config['tempo_ave'],
+                          velocity_ave=config['velocity_ave'],
+                          vel_min=config['vel_min'],
+                          vel_max=config['vel_max'])
+
+    note_info, pedal = pc.decode_offline(score)
+
+    ports = mido.get_output_names()
+    port = mido.open_output(ports[0])
+
+    note_info = note_info[note_info[:, 1].argsort()]
+    pedal = pedal[pedal[:, 0].argsort()]
+
+    midi_messages = []
+
+    for n, on, off, v in note_info:
+        on_msg = Message('note_on', note=int(n), velocity=int(v), time=on)
+        off_msg = Message('note_off', note=int(n), time=off)
+
+        midi_messages.append(on_msg)
+        midi_messages.append(off_msg)
+
+    for on, p in pedal:
+
+        midi_messages.append(
+            Message('control_change', control=64, value=int(p) * 127, time=on))
+
+    midi_messages.sort(key=lambda x: x.time)
+
+    init_time = time.time()
+    while len(midi_messages) > 0:
+
+        current_time = time.time() - init_time
+
+        if current_time >= midi_messages[0].time:
+            port.send(midi_messages[0])
+            del midi_messages[0]
+
+        time.sleep(1e-4)
+
+    port.close()
+
+
 if __name__ == '__main__':
 
-    test_dummy_performance_generation()
+    # test_dummy_performance_generation()
+    import json
+    from basismixer.performance_codec import PerformanceCodec
+    fn = '../bm_files/beethoven_op027_no2_mv1_bm_of_wm.txt'
+    config_fn = fn.replace('.txt', '.json')
+    pedal_fn = fn.replace('.txt', '.pedal')
+
+    config = json.load(open(config_fn))
+
+    score_dict = load_bm_preds(filename=fn, post_process_config=config,
+                               pedal_fn=pedal_fn)
+
+    pc = PerformanceCodec(tempo_ave=config['tempo_ave'],
+                          velocity_ave=config['velocity_ave'],
+                          vel_min=config['vel_min'],
+                          vel_max=config['vel_max'])
+
+    unique_onsets = np.array(list(score_dict.keys()))
+    unique_onsets.sort()
+
+    bpr_a = pc.tempo_ave
+    vel_a = pc.velocity_ave
+
+    on_messages = []
+    off_messages = []
+    ped_messages = []
+    for on in unique_onsets:
+        # Get score and performance info
+        (pitch, ioi, dur,
+         vt, vd, lbpr,
+         tim, lart, mel, ped) = score_dict[on]
+
+        _on_messages, _off_messages, _ped_messages = pc.decode_online(
+            pitch=pitch, ioi=ioi, dur=dur, vt=vt,
+            vd=vd, lbpr=lbpr, tim=tim, lart=lart,
+            mel=mel, bpr_a=bpr_a, vel_a=vel_a, ped=ped)
+
+        on_messages += _on_messages
+        off_messages += _off_messages
+        ped_messages += _ped_messages
+
+    ports = mido.get_output_names()
+    port = mido.open_output(ports[0])
+
+    midi_messages = on_messages + off_messages + ped_messages
+
+    midi_messages.sort(key=lambda x: x.time)
+
+    init_time = time.time()
+    while len(midi_messages) > 0:
+
+        current_time = time.time() - init_time
+
+        if current_time >= midi_messages[0].time:
+            port.send(midi_messages[0])
+            del midi_messages[0]
+
+        time.sleep(1e-4)
+
+    port.close()

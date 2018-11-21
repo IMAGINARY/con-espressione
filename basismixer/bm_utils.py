@@ -5,6 +5,17 @@ import scipy.signal as signal
 from scipy.interpolate import interp1d
 
 
+def get_unique_onsets(onsets):
+    # Get unique score positions
+    unique_onsets = np.unique(onsets)
+    unique_onsets.sort()
+
+    # List of indices corresponding to each of the unique score positions
+    unique_onset_idxs = [np.where(onsets == u)[0] for u in unique_onsets]
+
+    return unique_onsets, unique_onset_idxs
+
+
 def standardize(array):
     if not np.isclose(array.std(), 0):
 
@@ -94,7 +105,8 @@ def remove_trend(parameter, unique_onsets, smoothing='savgol',
         return parameter_trendless
 
 
-def get_vis_scaling_factors(score_dict, max_scaler, eps=1e-10):
+def get_vis_scaling_factors(score_dict, max_scaler, eps=1e-10,
+                            remove_trend_vt=True):
 
     vel_trend = []
     vel_dev = []
@@ -104,13 +116,18 @@ def get_vis_scaling_factors(score_dict, max_scaler, eps=1e-10):
     for on in score_dict:
         (pitch, ioi, dur,
          vt, vd, lbpr,
-         tim, lart, mel) = score_dict[on]
+         tim, lart, mel, ped) = score_dict[on]
 
-        vel_trend.append(vt)
-        vel_dev.append(vd)
-        log_bpr.append(lbpr)
-        timing.append(tim)
-        log_art.append(lart)
+        if vt is not None:
+            vel_trend.append(vt)
+        if vd is not None:
+            vel_dev.append(vd)
+        if lbpr is not None:
+            log_bpr.append(lbpr)
+        if tim is not None:
+            timing.append(tim)
+        if lart is not None:
+            log_art.append(lart)
 
     vel_trend = np.array(vel_trend)
     # vel_trend /= vel_trend.mean()
@@ -120,11 +137,15 @@ def get_vis_scaling_factors(score_dict, max_scaler, eps=1e-10):
     timingc = np.hstack(timing)
     log_artc = np.hstack(log_art)
 
-    vt_max = vel_trend.max() ** max_scaler
-    vt_min = vel_trend.min() ** max_scaler
+    if remove_trend_vt:
+        vt_max = vel_trend.max() * max_scaler
+        vt_min = vel_trend.min() * max_scaler
+    else:
+        vt_max = vel_trend.max() ** max_scaler
+        vt_min = vel_trend.min() ** max_scaler
 
-    vd_max = max_scaler * vel_devc.max()
-    vd_min = max_scaler * vel_devc.min()
+    vd_max = - max_scaler * vel_devc.max()
+    vd_min = - max_scaler * vel_devc.min()
 
     lbpr_max = max_scaler * log_bpr.max()
     lbpr_min = max_scaler * log_bpr.min()
@@ -145,22 +166,31 @@ def compute_vis_scaling(vt, vd, lbpr, tim, lart,
     (vt_max, vt_min, vd_max, vd_min, lbpr_max, lbpr_min,
      tim_max, tim_min, lart_max, lart_min) = vis_scaling_factors
 
-    # vts = sigmoid(((vt) / (vt_max - vt_min)) ** 3)
-    # vds = sigmoid(np.mean((vd) / (vd_max - vd_min)) ** 3)
-    # lbprs = sigmoid(((lbpr) / (lbpr_max - lbpr_min)) ** 3)
-    # tims = sigmoid(np.mean((tim) / (tim_max - tim_min)) ** 3)
-    # larts = sigmoid(np.mean((lart) / (lart_max - lart_min)) ** 3)
-
-    # TODO:
-    # * Test different scalings of the parameters
-
     if remove_trend_vt:
-        vts = sigmoid(vt)
+        vts = _scale_vis(vt, vt_min, vt_max)
     else:
-        vts = sigmoid(np.log2(vt + eps))
-    vds = np.mean(sigmoid(vd))
-    lbprs = sigmoid(lbpr)
-    tims = np.mean(sigmoid(tim))
-    larts = np.mean(sigmoid(lart))
+        vts = _scale_vis(np.log2(vt + eps), vt_min, vt_max)
+
+    vds = _scale_vis(- vd, vd_min, vd_max)
+    lbprs = _scale_vis(lbpr, lbpr_min, lbpr_max)
+    tims = _scale_vis(tim, tim_min, tim_max)
+    larts = _scale_vis(lart, lart_min, lart_max)
 
     return vts, vds, lbprs, tims, larts
+
+
+def _scale_vis(x, x_min, x_max):
+
+    if isinstance(x, float):
+        x_p = x
+    elif isinstance(x, np.ndarray):
+        x_p = np.mean(x)
+
+    if np.isclose(x_p, 0):
+        xs = 0.5
+    elif x_p > 0:
+        xs = 0.5 * ((x_p - x_min) / (x_max - x_min) + 1)
+    elif x_p < 0:
+        xs = -0.5 * (x_p - x_min) / (x_min)
+
+    return xs

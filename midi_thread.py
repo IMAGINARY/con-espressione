@@ -7,11 +7,14 @@ import mido
 import numpy as np
 import json
 import fluidsynth
+import os
 
 from basismixer.performance_codec import (load_bm_preds,
                                           PerformanceCodec)
 from basismixer.bm_utils import (get_vis_scaling_factors,
                                  compute_vis_scaling)
+
+from basismixer.expression_tools import scale_parameters
 
 
 class MidiThread(threading.Thread):
@@ -87,10 +90,14 @@ class BMThread(threading.Thread):
 
         self.post_process_config = json.load(
             open(bm_precomputed_path.replace('.txt', '.json')))
+        pedal_fn = (bm_precomputed_path.replace('.txt', '.pedal')
+                    if os.path.exists(bm_precomputed_path.replace('.txt', '.pedal'))
+                    else None)
         # Construct score-performance dictionary
         self.score_dict = load_bm_preds(bm_precomputed_path,
                                         deadpan=deadpan,
-                                        post_process_config=self.post_process_config)
+                                        post_process_config=self.post_process_config,
+                                        pedal_fn=pedal_fn)
 
         self.tempo_ave = self.post_process_config.get(
             'tempo_ave', 60.0 / float(tempo_ave))
@@ -131,8 +138,10 @@ class BMThread(threading.Thread):
                                    remove_trend_lbpr=self.remove_trend_lbpr)
 
         # Scaling factors for the visualization
-        self.vis_scaling_factors = get_vis_scaling_factors(self. score_dict,
-                                                           self.max_scaler)
+        self.vis_scaling_factors = get_vis_scaling_factors(
+            self. score_dict,
+            self.max_scaler,
+            remove_trend_vt=self.remove_trend_vt)
 
         self.play = True
 
@@ -156,6 +165,7 @@ class BMThread(threading.Thread):
 
         # Initialize list for note off messages
         off_messages = []
+        ped_messages = []
 
         # Initialize controller scaling
         controller_p = 1.0
@@ -173,7 +183,7 @@ class BMThread(threading.Thread):
             # Get score and performance info
             (pitch, ioi, dur,
              vt, vd, lbpr,
-             tim, lart, mel) = self.score_dict[on]
+             tim, lart, mel, ped) = self.score_dict[on]
 
             # update tempo and dynamics from the controller
             bpr_a = self.tempo
@@ -184,44 +194,43 @@ class BMThread(threading.Thread):
             if p_update is not None:
                 controller_p = self.max_scaler * p_update / 100
 
-            # Scale parameters
-            if self.remove_trend_vt:
-                vt *= controller_p
-            else:
-                vt = vt ** controller_p
-            vd *= controller_p
-            lbpr *= controller_p
-            tim *= controller_p
-            lart *= controller_p
+            if vt is not None:
 
-            vts, vds, lbprs, tims, larts = compute_vis_scaling(
-                vt, vd, lbpr, tim, lart, self.vis_scaling_factors)
-            if self.vis is not None:
-                for vis, scale in zip(self.vis, [vts, vds, lbprs, tims, larts]):
-                    vis.update_widget(scale)
+                vt, vd, lbpr, tim, lart, ped, mel = scale_parameters(
+                    vt=vt, vd=vd, lbpr=lbpr,
+                    tim=tim, lart=lart, pitch=pitch,
+                    mel=mel, ped=ped, vel_a=vel_a,
+                    bpr_a=bpr_a, controller_p=controller_p,
+                    remove_trend_vt=self.remove_trend_vt)
 
-                # Decode parameters to MIDI messages
-                on_messages, _off_messages = self.pc.decode_online(
-                    pitch=pitch, ioi=ioi, dur=dur, vt=vt,
-                    vd=vd, lbpr=lbpr, tim=tim, lart=lart,
-                    mel=mel, bpr_a=bpr_a, vel_a=vel_a)
+                vts, vds, lbprs, tims, larts = compute_vis_scaling(
+                    vt, vd, lbpr, tim, lart, self.vis_scaling_factors)
+                if self.vis is not None:
+                    for vis, scale in zip(self.vis, [vts, vds, lbprs, tims, larts]):
+                        vis.update_widget(scale)
 
-                off_messages += _off_messages
+            # Decode parameters to MIDI messages
+            on_messages, _off_messages, _ped_messages = self.pc.decode_online(
+                pitch=pitch, ioi=ioi, dur=dur, vt=vt,
+                vd=vd, lbpr=lbpr, tim=tim, lart=lart,
+                mel=mel, bpr_a=bpr_a, vel_a=vel_a, ped=ped)
+
+            off_messages += _off_messages
+            ped_messages += _ped_messages
 
             # Sort list of note off messages by offset time
             off_messages.sort(key=lambda x: x.time)
+            ped_messages.sort(key=lambda x: x.time)
 
             # Send otuput MIDI messages
-            while len(on_messages) > 0 and self.play:
+            while (len(on_messages) > 0 or len(ped_messages) > 0) and self.play:
 
-                # Send note on messages
-                # Get current time
-                current_time = time.time() - init_time
-                if current_time >= on_messages[0].time:
-                    # Send current note on message
-                    fs.noteon(0, on_messages[0].note, on_messages[0].velocity)
-                    # delete note on message from the list
-                    del on_messages[0]
+                # Send pedal
+                if len(ped_messages) > 0:
+                    current_time = time.time() - init_time
+                    if current_time >= ped_messages[0].time:
+                        fs.cc(0, 64, ped_messages[0].value)
+                        del ped_messages[0]
 
                 # If there are note off messages, send them
                 if len(off_messages) > 0:
@@ -232,6 +241,16 @@ class BMThread(threading.Thread):
                         fs.noteoff(0, off_messages[0].note)
                         # delete note off message from the list
                         del off_messages[0]
+
+                # Send note on messages
+                if len(on_messages) > 0:
+                    current_time = time.time() - init_time
+                    if current_time >= on_messages[0].time:
+                        # Send current note on message
+                        fs.noteon(0, on_messages[0].note,
+                                  on_messages[0].velocity)
+                        # delete note on message from the list
+                        del on_messages[0]
 
                 # sleep for a little bit...
                 time.sleep(5e-4)
