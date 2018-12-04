@@ -41,6 +41,7 @@ class PerformanceCodec(object):
         self.remove_trend_vt = remove_trend_vt
         self.remove_trend_lbpr = remove_trend_lbpr
 
+
     def _decode_step(self, ioi, dur, vt, vd, lbpr,
                      tim, lart, mel, bpr_a, vel_a, pitch):
         """Compute performed onset, duration and MIDI velocity
@@ -65,7 +66,7 @@ class PerformanceCodec(object):
         lart : array
             Log articulation ratio of the notes of the current score position.
         mel : array
-            Melody lead (TODO: add melody lead)
+            Melody lead
         bpr_a : float
             Average beat period corresponding to the current score position.
         vel_a : float

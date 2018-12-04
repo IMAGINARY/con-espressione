@@ -47,3 +47,16 @@ def scale_parameters(vt, vd, lbpr, tim, lart, pitch,
         ped = ped * (controller_p > 0)
 
     return vt, vd, lbpr, tim, lart, ped, mel
+
+
+def scale_parameters_w_controller(vt, vd, lbpr, tim, lart, pitch, mel, ped,
+                                  bm_controller, vel_a, bpr_a,
+                                  remove_trend_vt=True,
+                                  remove_trend_lbpr=True):
+
+    vt = (vt * bm_controller.vt_std.value) + bm_controller.vt_mean.value
+    vd = (vd * bm_controller.vd_std.value) + bm_controller.vd_mean.value
+    lbpr = (lbpr * bm_controller.lbpr_std.value) + bm_controller.lbpr_mean.value
+    tim = (tim * bm_controller.tim_std.value) + bm_controller.tim_mean.value
+    lart = (lart * bm_controller.lart_std.value) + bm_controller.lart_mean.value
+    return vt, vd, lbpr, tim, lart, ped, mel

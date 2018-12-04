@@ -137,6 +137,7 @@ class BMThread(threading.Thread):
                                    remove_trend_vt=self.remove_trend_vt,
                                    remove_trend_lbpr=self.remove_trend_lbpr)
 
+
         # Scaling factors for the visualization
         self.vis_scaling_factors = get_vis_scaling_factors(
             self. score_dict,
@@ -156,6 +157,7 @@ class BMThread(threading.Thread):
         self.scalar = scalar
 
     def run(self):
+
         # Get unique score positions (and sort them)
         unique_onsets = np.array(list(self.score_dict.keys()))
         unique_onsets.sort()
