@@ -1,11 +1,5 @@
 """
-Run the Demo
-
-TODO
-----
-
-* Improve user interface for setting up the demo
-  (before the worm visualization?)
+    Run the Demo
 """
 import os
 from kivy.app import App
@@ -56,17 +50,17 @@ class LeapControl(App):
         self.root.add_widget(self.scm)
 
         # Navigation
-        # self.root.add_widget(self.navigation())
+        self.root.add_widget(self.navigation())
 
         # add screens to screen manager
         replay_screen = Screen(name='replay')
-        # self.scm.add_widget(replay_screen)
+        self.scm.add_widget(replay_screen)
 
         intro_screen = Screen(name='intro')
         path_video = os.path.join(self.fn_video)
-        # player = VideoPlayer(source=path_video)
-        # intro_screen.add_widget(player)
-        # self.scm.add_widget(intro_screen)
+        player = VideoPlayer(source=path_video)
+        intro_screen.add_widget(player)
+        self.scm.add_widget(intro_screen)
         # self.scm.current = 'intro'
         # directly jump to demo screen
         self.screen_demo()
@@ -282,6 +276,7 @@ class LeapControl(App):
             self.knob_thread = MidiKnobThread(bm_scaler_knob)
         self.knob_thread.start()
         self.driver = self.get_audio_driver()
+
         # select playback mode
         if self.config.get('settings', 'playmode') == 'MIDI':
             self.playback_thread = MidiThread(
