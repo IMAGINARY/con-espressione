@@ -56,7 +56,7 @@ class LeapControl(App):
         self.root.add_widget(self.scm)
 
         # Navigation
-        self.root.add_widget(self.navigation())
+        # self.root.add_widget(self.navigation())
 
         # add screens to screen manager
         replay_screen = Screen(name='replay')
@@ -64,9 +64,9 @@ class LeapControl(App):
 
         intro_screen = Screen(name='intro')
         path_video = os.path.join(self.fn_video)
-        player = VideoPlayer(source=path_video)
-        intro_screen.add_widget(player)
-        self.scm.add_widget(intro_screen)
+        # player = VideoPlayer(source=path_video)
+        # intro_screen.add_widget(player)
+        # self.scm.add_widget(intro_screen)
         # self.scm.current = 'intro'
         # directly jump to demo screen
         self.screen_demo()
