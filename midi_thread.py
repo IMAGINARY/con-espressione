@@ -222,7 +222,8 @@ class BMThread(threading.Thread):
             on_messages, _off_messages, _ped_messages = self.pc.decode_online(
                 pitch=pitch, ioi=ioi, dur=dur, vt=vt,
                 vd=vd, lbpr=lbpr, tim=tim, lart=lart,
-                mel=mel, bpr_a=bpr_a, vel_a=vel_a, ped=ped)
+                mel=mel, bpr_a=bpr_a, vel_a=vel_a, ped=ped,
+                controller_p=controller_p)
 
             off_messages += _off_messages
             ped_messages += _ped_messages

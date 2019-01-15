@@ -41,9 +41,9 @@ class PerformanceCodec(object):
         self.remove_trend_vt = remove_trend_vt
         self.remove_trend_lbpr = remove_trend_lbpr
 
-
     def _decode_step(self, ioi, dur, vt, vd, lbpr,
-                     tim, lart, mel, bpr_a, vel_a, pitch):
+                     tim, lart, mel, bpr_a, vel_a, pitch,
+                     controller_p=1.0):
         """Compute performed onset, duration and MIDI velocity
         for the current onset time.
         Parameters
@@ -85,6 +85,7 @@ class PerformanceCodec(object):
         perf_vel : array
             Performed MIDI velocity of the notes in the current score position
         """
+
         # Compute equivalent onset
         eq_onset = self.prev_eq_onset + ((2 ** self._lbpr) * bpr_a) * ioi
 
@@ -103,14 +104,36 @@ class PerformanceCodec(object):
 
         if self.remove_trend_vt:
             _perf_vel = vel_a - vd - self.velocity_ave * vt
-            perf_vel = np.clip(np.round(_perf_vel),
-                               a_min=self.vel_min,
-                               a_max=self.vel_max).astype(np.int)
+            perf_vel = _perf_vel
         else:
-            perf_vel = np.clip(np.round(vt * vel_a - vd),
-                               a_min=self.vel_min,
-                               a_max=self.vel_max).astype(np.int)
+            perf_vel = vt * vel_a - vd
 
+        if mel.sum() > 0:
+            # max velocity
+            vmax = perf_vel.max()
+            # index of the maximal velocity
+            max_ix = np.where(perf_vel == vmax)[0]
+            # velocity of the melody
+            vmel = perf_vel[mel.astype(np.bool)].mean()
+
+            # Set velocity of the melody as the maximal
+            perf_vel[mel.astype(np.bool)] = vmax
+
+            # Adapt the velocity of the accompaniment
+            perf_vel[max_ix] = vmel
+            perf_vel[mel.astype(np.bool)] = vmax
+
+            # adjust scaling of accompaniment
+            alpha = (perf_vel / vmax) ** controller_p
+            # print('alpha', alpha, controller_p)
+
+            # Re-scale velocity
+            perf_vel = alpha * vmax
+
+        # Clip velocity within the specified range and cast as integer
+        perf_vel = np.clip(np.round(perf_vel),
+                           a_min=self.vel_min,
+                           a_max=self.vel_max).astype(np.int)
         return perf_onset, perf_duration, perf_vel
 
     def _pedal_step(self, ioi, bpr_a):
@@ -122,7 +145,8 @@ class PerformanceCodec(object):
         return ped_onset
 
     def decode_online(self, pitch, ioi, dur, vt, vd, lbpr,
-                      tim, lart, mel, bpr_a, vel_a, ped=None):
+                      tim, lart, mel, bpr_a, vel_a, ped=None,
+                      controller_p=1.0):
         """Decode the expressive performance of the notes at the same
         score position and output the corresponding MIDI messages.
 
@@ -181,7 +205,8 @@ class PerformanceCodec(object):
                                                                       mel=mel,
                                                                       bpr_a=bpr_a,
                                                                       vel_a=vel_a,
-                                                                      pitch=pitch)
+                                                                      pitch=pitch,
+                                                                      controller_p=controller_p)
 
             # Indices to sort the notes according to their onset times
             osix = np.argsort(perf_onset)
