@@ -12,7 +12,8 @@ import os
 from basismixer.performance_codec import (load_bm_preds,
                                           PerformanceCodec)
 from basismixer.bm_utils import (get_vis_scaling_factors,
-                                 compute_vis_scaling)
+                                 compute_vis_scaling, sigmoid,
+                                 SIGMOID_1)
 
 from basismixer.expression_tools import scale_parameters
 
@@ -137,7 +138,6 @@ class BMThread(threading.Thread):
                                    remove_trend_vt=self.remove_trend_vt,
                                    remove_trend_lbpr=self.remove_trend_lbpr)
 
-
         # Scaling factors for the visualization
         self.vis_scaling_factors = get_vis_scaling_factors(
             self. score_dict,
@@ -151,7 +151,13 @@ class BMThread(threading.Thread):
 
     def set_tempo(self, tempo):
         # Scale average tempo
-        self.tempo = tempo * self.tempo_ave
+        if tempo <= 1:
+            t_scale = tempo
+        if tempo > 1:
+            # TODO:
+            # Test other scalings
+            t_scale = sigmoid(tempo) / SIGMOID_1
+        self.tempo = t_scale * self.tempo_ave
 
     def set_scaler(self, scalar):
         self.scalar = scalar

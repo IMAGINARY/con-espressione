@@ -32,6 +32,10 @@ def sigmoid(x):
     return 1 / (1 + np.exp(-x))
 
 
+# for convenience
+SIGMOID_1 = sigmoid(1.0)
+
+
 def sgf_smooth(y, ws=51, order=5):
     """Savitzky-Golay filter
     """

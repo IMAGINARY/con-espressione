@@ -39,7 +39,12 @@ def scale_parameters(vt, vd, lbpr, tim, lart, pitch,
     else:
         vt = vt ** controller_p
     vd *= controller_p
-    lbpr *= controller_p
+
+    if controller_p > 0:
+        lbpr += np.log2(controller_p)
+    else:
+        lbpr *= 0
+    # lbpr *= controller_p
     tim *= controller_p
     lart *= controller_p
 
@@ -56,7 +61,9 @@ def scale_parameters_w_controller(vt, vd, lbpr, tim, lart, pitch, mel, ped,
 
     vt = (vt * bm_controller.vt_std.value) + bm_controller.vt_mean.value
     vd = (vd * bm_controller.vd_std.value) + bm_controller.vd_mean.value
-    lbpr = (lbpr * bm_controller.lbpr_std.value) + bm_controller.lbpr_mean.value
+    lbpr = ((lbpr * bm_controller.lbpr_std.value) +
+            bm_controller.lbpr_mean.value)
     tim = (tim * bm_controller.tim_std.value) + bm_controller.tim_mean.value
-    lart = (lart * bm_controller.lart_std.value) + bm_controller.lart_mean.value
+    lart = ((lart * bm_controller.lart_std.value) +
+            bm_controller.lart_mean.value)
     return vt, vd, lbpr, tim, lart, ped, mel
