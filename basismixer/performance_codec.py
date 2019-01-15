@@ -1,10 +1,10 @@
 """
-Helper methods to load the precomputed performance and score information
-from the Basis Mixer.
+    Helper methods to load the precomputed performance and score information
+    from the Basis Mixer.
 
-TODO
-----
-* Add melody lead
+    TODO
+    ----
+    * Add melody lead
 """
 import numpy as np
 from mido import Message
@@ -46,6 +46,7 @@ class PerformanceCodec(object):
                      tim, lart, mel, bpr_a, vel_a, pitch):
         """Compute performed onset, duration and MIDI velocity
         for the current onset time.
+
         Parameters
         ----------
         ioi: float

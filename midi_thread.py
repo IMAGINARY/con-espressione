@@ -1,5 +1,8 @@
 """
     Threading class for MIDI playback.
+    We distinguish between simple Midi playback in the class `MidiThread`
+    and performance rendering through the Basis Mixer in class `BMThread`.
+    In both cases, the outputs will be Midi events.
 """
 import threading
 import time
@@ -48,7 +51,7 @@ class MidiThread(threading.Thread):
 
         fs = fluidsynth.Synth()
         fs.start(driver=self.driver)
-        sfid = fs.sfload('./sound_font/grand-piano-YDP-20160804.sf2')
+        sfid = fs.sfload('./sound_font/default.sf2')
         fs.program_select(0, sfid, 0, 0)
 
         for msg in self.midi:
@@ -137,7 +140,6 @@ class BMThread(threading.Thread):
                                    remove_trend_vt=self.remove_trend_vt,
                                    remove_trend_lbpr=self.remove_trend_lbpr)
 
-
         # Scaling factors for the visualization
         self.vis_scaling_factors = get_vis_scaling_factors(
             self. score_dict,
@@ -175,7 +177,7 @@ class BMThread(threading.Thread):
 
         fs = fluidsynth.Synth()
         fs.start(driver=self.driver)
-        sfid = fs.sfload('./sound_font/grand-piano-YDP-20160804.sf2')
+        sfid = fs.sfload('./sound_font/default.sf2')
         fs.program_select(0, sfid, 0, 0)
 
         p_update = None

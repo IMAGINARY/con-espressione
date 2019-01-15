@@ -8,8 +8,6 @@ TODO
   (before the worm visualization?)
 """
 import os
-os.environ['KIVY_VIDEO'] = 'ffpyplayer'
-
 from kivy.app import App
 from kivy.clock import Clock
 from kivy.uix.button import Button
@@ -49,12 +47,12 @@ class LeapControl(App):
 
     def build(self):
         """Create all GUI items."""
+
         self.worm_controller = self.get_worm_controller()
 
         # basic layout blocks
         self.root = StackLayout()
-        self.scm = ScreenManager(
-            transition=SlideTransition(), size_hint=(1.0, 0.9))
+        self.scm = ScreenManager(transition=SlideTransition(), size_hint=(1.0, 0.9))
         self.root.add_widget(self.scm)
 
         # Navigation
@@ -62,19 +60,22 @@ class LeapControl(App):
 
         # add screens to screen manager
         replay_screen = Screen(name='replay')
-        self.scm.add_widget(replay_screen)
+        # self.scm.add_widget(replay_screen)
 
         intro_screen = Screen(name='intro')
         path_video = os.path.join(self.fn_video)
         player = VideoPlayer(source=path_video)
         intro_screen.add_widget(player)
         self.scm.add_widget(intro_screen)
-        self.scm.current = 'intro'
+        # self.scm.current = 'intro'
+        # directly jump to demo screen
+        self.screen_demo()
 
         return self.root
 
     def build_config(self, config):
         """Define default config."""
+
         config.setdefaults('settings', {
             'playmode': 'BM',
             'driver': 'alsa' if platform.system() == 'Linux' else 'coreaudio',
@@ -86,8 +87,8 @@ class LeapControl(App):
         })
 
     def on_config_change(self, config, section, key, value):
+        """Invoke reset when changing config."""
         if section == "settings":
-
             if key == "driver":
                 self.driver = value
             if key == 'control':
@@ -119,8 +120,8 @@ class LeapControl(App):
         return self.config.get('settings', 'driver')
 
     def list_files(self, file_path='./midi/', file_ending='.mid'):
-        """Get available songs."""
-        # get available MIDIs
+        """Get list of available songs."""
+
         all_files = [f for f in os.listdir(
             file_path) if os.path.isfile(os.path.join(file_path, f))]
 
@@ -179,22 +180,22 @@ class LeapControl(App):
 
                        { "type": "title",
                           "title": "BM Options" },
-                      { "type": "options",
+                       { "type": "options",
                           "title": "BM File",
                           "desc": "Select Song for the Basis Mixer",
                           "section": "settings",
                           "key": "bm_file",
                           "options": %s },
 
-                      {"type":"title",
-                       "title": "Knob Control"},
-                      {"type": "options",
-                       "title": "Knob Device",
-                       "desc": "Use PowerMate or nanoKONTROL 2",
-                       "key": "knob_type",
-                       "section": "settings",
-                       "options": ["PowerMate", "nanoKONTROL 2"]
-                      }
+                       { "type":"title",
+                         "title": "Knob Control"},
+                       { "type": "options",
+                         "title": "Knob Device",
+                         "desc": "Use PowerMate or nanoKONTROL 2",
+                         "key": "knob_type",
+                         "section": "settings",
+                         "options": ["PowerMate", "nanoKONTROL 2"]
+                       }
 
                     ]
                     """ % (str([os.path.split(song)[-1] for song in songs]).replace('\'', '"'),
@@ -260,8 +261,7 @@ class LeapControl(App):
         bm_circle_5 = RectangleWidget(name='Articulation', color=(208/255, 8/255, 124/255),
                                       pos_hint={'top': top, 'right': 0.75}, size_hint=size_hint, size=rect_size)
 
-        bm_scaler_knob = Knob(
-            pos_hint={'top': top, 'right': 0.95}, size=circle_size)
+        bm_scaler_knob = Knob(pos_hint={'top': top, 'right': 0.95}, size=circle_size)
         bm_scaler_knob.value = 0
         bm_scaler_knob.max = 100
         bm_scaler_knob.min = 0

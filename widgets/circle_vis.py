@@ -1,3 +1,7 @@
+"""
+    Visualization widget with circle.
+    Size of the widget can be manipulated while running the app.
+"""
 from kivy.uix.widget import Widget
 from kivy.graphics import Color, Ellipse
 import numpy as np

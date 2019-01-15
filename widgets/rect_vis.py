@@ -1,3 +1,7 @@
+"""
+    Visualization widget similar to a bar diagram.
+    Size of the widget can be manipulated while running the app.
+"""
 from kivy.uix.widget import Widget
 from kivy.graphics import Color, Ellipse, Rectangle
 from kivy.uix.label import Label
