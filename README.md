@@ -38,6 +38,11 @@ LeapMotion SDK installation guide: https://support.leapmotion.com/hc/en-us/artic
     sudo apt install libasound2-dev libjack-dev libusb-1.0-0-dev libudev-dev fluidsynth
 ```
 
+If you want to use the knob to control the AI level, you need to add this
+udev rule: https://github.com/signal11/hidapi/blob/master/udev/99-hid.rules
+
+Please set the `idVendor` to `077d` `idProduct` to `0410` in lines 12 and 20.
+
 ### Mac Specific
 
 ```

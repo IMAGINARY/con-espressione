@@ -18,4 +18,4 @@ dependencies:
     - python-rtmidi
     - ffpyplayer
     - hidapi
-    - fluidsynth
+    - pyfluidsynth
