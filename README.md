@@ -32,6 +32,8 @@ All needed packages can be installed through:
 
 ### Linux Specific
 
+LeapMotion SDK installation guide: https://support.leapmotion.com/hc/en-us/articles/223782608-Linux-Installation
+
 ```
     sudo apt install fluidsynth
 ```
