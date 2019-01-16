@@ -82,8 +82,8 @@ class LeapControl(App):
 
     def on_config_change(self, config, section, key, value):
         """Invoke reset when changing config."""
-        if section == "settings":
-            if key == "driver":
+        if section == 'settings':
+            if key == 'driver':
                 self.driver = value
             if key == 'control':
                 self.worm_controller = self.get_worm_controller()
