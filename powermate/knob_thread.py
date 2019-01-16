@@ -23,7 +23,7 @@ class KnobThread(Thread):
 
         except IOError:
             self.device = None
-            print('Invalid device')
+            print('knob_thead.py: Could not open knob device!')
 
     def run(self):
 

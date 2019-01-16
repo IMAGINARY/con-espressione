@@ -35,7 +35,7 @@ All needed packages can be installed through:
 LeapMotion SDK installation guide: https://support.leapmotion.com/hc/en-us/articles/223782608-Linux-Installation
 
 ```
-    sudo apt install fluidsynth
+    sudo apt install libasound2-dev libjack-dev libusb-1.0-0-dev libudev-dev fluidsynth
 ```
 
 ### Mac Specific
