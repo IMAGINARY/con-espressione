@@ -123,12 +123,24 @@ class PerformanceCodec(object):
             perf_vel[max_ix] = vmel
             perf_vel[mel.astype(np.bool)] = vmax
 
+            rel_perf_vel = perf_vel / vmax
             # adjust scaling of accompaniment
-            alpha = (perf_vel / vmax) ** controller_p
+
+            if controller_p > 0:
+                alpha = rel_perf_vel ** (np.exp(5 * controller_p))
+            else:
+                alpha = rel_perf_vel ** controller_p
             # print('alpha', alpha, controller_p)
 
             # Re-scale velocity
-            perf_vel = alpha * vmax
+
+            if vmax <= self.vel_max:
+                perf_vel = alpha * vmax
+            else:
+                perf_vel = alpha * self.vel_max
+
+            print(np.column_stack(
+                (mel, perf_vel, rel_perf_vel, alpha)), controller_p)
 
         # Clip velocity within the specified range and cast as integer
         perf_vel = np.clip(np.round(perf_vel),
