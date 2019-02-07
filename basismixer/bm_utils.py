@@ -1,4 +1,5 @@
-"""Utils for the performance codec
+"""
+    Utils for the performance codec
 """
 import numpy as np
 import scipy.signal as signal
@@ -54,6 +55,8 @@ def remove_trend(parameter, unique_onsets, smoothing='savgol',
                  return_smoothed_param=False, *args, **kwargs):
     """Remove the trend from an onset-wise expressive parameter
 
+    Parameters
+    ----------
     parameter : array
         Onset-wise expressive parameter (predicted by the BM)
     unique_onsets : array

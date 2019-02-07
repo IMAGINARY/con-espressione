@@ -1,4 +1,7 @@
-# import threading
+"""
+    This module maps knobs and faders from the KORG nanoKONTROL2 to Basis Mixer
+    parameters. It can be used to tune parameters interactively.
+"""
 from threading import Thread
 import mido
 import time
@@ -151,8 +154,8 @@ class BMControllerThread(Thread):
 
         return config
 
-            
-                
+
+
 
 
 if __name__ == '__main__':

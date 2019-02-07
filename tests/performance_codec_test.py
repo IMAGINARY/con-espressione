@@ -1,6 +1,6 @@
 """
-Tests for performance generation using the precomputed inputs of the
-Basis Mixer.
+    Tests for performance generation using the precomputed
+    inputs of the Basis Mixer.
 """
 import mido
 import numpy as np
