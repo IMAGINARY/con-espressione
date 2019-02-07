@@ -29,7 +29,8 @@ class PerformanceCodec(object):
                  vel_min=30, vel_max=110,
                  init_eq_onset=0.0,
                  remove_trend_vt=True,
-                 remove_trend_lbpr=True):
+                 remove_trend_lbpr=True,
+                 pedal_threshold=60):
         self.vel_min = vel_min
         self.vel_max = vel_max
         self.tempo_ave = float(tempo_ave)
@@ -40,6 +41,7 @@ class PerformanceCodec(object):
         self._lbpr = 0
         self.remove_trend_vt = remove_trend_vt
         self.remove_trend_lbpr = remove_trend_lbpr
+        self.pedal_threshold = pedal_threshold
 
     def _decode_step(self, ioi, dur, vt, vd, lbpr,
                      tim, lart, mel, bpr_a, vel_a, pitch,
@@ -127,10 +129,11 @@ class PerformanceCodec(object):
             # adjust scaling of accompaniment
 
             if controller_p > 0:
+                # TODO:
+                # * add scaling in config file
                 alpha = rel_perf_vel ** (np.exp(5 * controller_p))
             else:
                 alpha = rel_perf_vel ** controller_p
-            # print('alpha', alpha, controller_p)
 
             # Re-scale velocity
 
@@ -139,8 +142,8 @@ class PerformanceCodec(object):
             else:
                 perf_vel = alpha * self.vel_max
 
-            print(np.column_stack(
-                (mel, perf_vel, rel_perf_vel, alpha)), controller_p)
+            # print(np.column_stack(
+            #     (mel, perf_vel, rel_perf_vel, alpha)), controller_p)
 
         # Clip velocity within the specified range and cast as integer
         perf_vel = np.clip(np.round(perf_vel),
@@ -240,15 +243,17 @@ class PerformanceCodec(object):
                 off_messages.append(off_msg)
 
             if ped is not None:
+                ped_val = 127 if ped >= self.pedal_threshold else 0
                 ped_msg = Message('control_change', control=64,
-                                  value=int(ped * 127),
+                                  value=int(ped_val),
                                   time=perf_onset.mean())
                 pedal_messages.append(ped_msg)
 
         elif vt is None and ped is not None:
+            ped_val = 127 if ped >= self.pedal_threshold else 0
             ped_onset = self._pedal_step(ioi, bpr_a)
             ped_msg = Message('control_change', control=64,
-                              value=int(ped * 127),
+                              value=int(ped_val),
                               time=ped_onset)
             pedal_messages.append(ped_msg)
 
@@ -513,14 +518,44 @@ def _build_score_dict(pitches, onsets, durations, melody,
 
             else:
                 pix = unique_onset_idxs[int(perf_ix)]
-                pit = pitches[pix]
-                dur = durations[pix]
-                vt = np.mean(vel_trend[pix])
-                vd = vel_dev[pix]
-                lbpr = np.mean(log_bpr[pix])
-                tim = timing[pix]
-                lart = log_art[pix]
-                mel = melody[pix]
+                # pit = pitches[pix]
+
+                # Get unique pitches for each score onset
+                upit = np.unique(pitches[pix])
+                upit_ix = [pix[np.where(pitches[pix] == up)[0]] for up in upit]
+                # dur = durations[pix]
+
+                # Get indices of the largest durations of unique pitches
+                # for each score onset (for the case of two notes with different
+                # duration but with the same pitch at the same score
+                # position with the same pitch,
+                # like in the Moonlight Sonata)
+                udurmx = []
+                for ud in upit_ix:
+
+                    if len(ud) == 1:
+                        udurmx.append(int(ud))
+
+                    else:
+                        udurmx.append(ud[durations[ud].argmax()])
+
+                udurmx = np.array(udurmx).astype(np.int)
+
+                pit = pitches[udurmx]
+                dur = durations[udurmx]
+                vt = np.mean(vel_trend[udurmx])
+                vd = vel_dev[udurmx]
+                lbpr = np.mean(log_bpr[udurmx])
+                tim = timing[udurmx]
+                lart = log_art[udurmx]
+                mel = melody[udurmx]
+
+                # vt = np.mean(vel_trend[pix])
+                # vd = vel_dev[pix]
+                # lbpr = np.mean(log_bpr[pix])
+                # tim = timing[pix]
+                # lart = log_art[pix]
+                # mel = melody[pix]
 
             if len(ped_ix) == 0:
                 ped = None

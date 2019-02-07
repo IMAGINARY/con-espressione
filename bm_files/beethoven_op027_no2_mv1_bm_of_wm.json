@@ -3,7 +3,7 @@
         "exag_exp": 1.0
     },
     "vel_dev": {
-        "mean": 5.0,
+        "mean": 4.5,
         "std": 0.2
     },
     "log_bpr": {
@@ -15,11 +15,12 @@
         "std": 0.013
     },
     "log_art": {
-        "mean": 1.5195524716854153e-17,
+        "mean": 0.0,
         "std": 0.5305324184343643
     },
     "tempo_ave": 2.4,
-    "velocity_ave": 50,
+    "velocity_ave": 45,
     "vel_min": 30,
-    "vel_max": 100
+    "vel_max": 90,
+    "pedal_threshold": 50
 }

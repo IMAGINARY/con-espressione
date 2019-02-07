@@ -175,7 +175,7 @@ def compute_vis_scaling(vt, vd, lbpr, tim, lart,
     else:
         vts = _scale_vis(np.log2(vt + eps), vt_min, vt_max)
 
-    vds = _scale_vis(- vd, vd_min, vd_max)
+    vds = _scale_vis(vd, vd_min, vd_max)
     lbprs = _scale_vis(lbpr, lbpr_min, lbpr_max)
     tims = _scale_vis(tim, tim_min, tim_max)
     larts = _scale_vis(lart, lart_min, lart_max)
@@ -194,7 +194,10 @@ def _scale_vis(x, x_min, x_max):
         xs = 0.5
     elif x_p > 0:
         xs = 0.5 * ((x_p - x_min) / (x_max - x_min) + 1)
-    elif x_p < 0:
+    elif x_p < 0 and not np.isclose(x_min, 0):
         xs = -0.5 * (x_p - x_min) / (x_min)
+    else:
+        print('weird error')
+        xs = 0.5
 
     return xs

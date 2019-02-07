@@ -20,5 +20,6 @@
     },
     "vel_max":100,
     "tempo_ave":2.4,
-    "vel_min": 20
+    "vel_min": 20,
+    "pedal_threshold": 50
 }
