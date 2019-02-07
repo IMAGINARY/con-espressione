@@ -85,7 +85,8 @@ class BMThread(threading.Thread):
                  velocity_ave=50,
                  deadpan=False,
                  scaler=None, vis=None,
-                 max_scaler=2.0):
+                 max_scaler=2.0,
+                 pedal_threshold=60):
         threading.Thread.__init__(self)
 
         self.driver = driver
@@ -111,6 +112,8 @@ class BMThread(threading.Thread):
         # Minimal and maximal MIDI velocities allowed for each note
         self.vel_min = self.post_process_config.get('vel_min', vel_min)
         self.vel_max = self.post_process_config.get('vel_max', vel_max)
+        self.pedal_threshold = self.post_process_config.get(
+            'pedal_threshold', pedal_threshold)
 
         # Controller for the effect of the BM (PowerMate)
         self.scaler = scaler
@@ -139,7 +142,8 @@ class BMThread(threading.Thread):
                                    vel_min=self.vel_min,
                                    vel_max=self.vel_max,
                                    remove_trend_vt=self.remove_trend_vt,
-                                   remove_trend_lbpr=self.remove_trend_lbpr)
+                                   remove_trend_lbpr=self.remove_trend_lbpr,
+                                   pedal_threshold=self.pedal_threshold)
 
         # Scaling factors for the visualization
         self.vis_scaling_factors = get_vis_scaling_factors(
@@ -225,7 +229,8 @@ class BMThread(threading.Thread):
             on_messages, _off_messages, _ped_messages = self.pc.decode_online(
                 pitch=pitch, ioi=ioi, dur=dur, vt=vt,
                 vd=vd, lbpr=lbpr, tim=tim, lart=lart,
-                mel=mel, bpr_a=bpr_a, vel_a=vel_a, ped=ped)
+                mel=mel, bpr_a=bpr_a, vel_a=vel_a, ped=ped,
+                controller_p=controller_p)
 
             off_messages += _off_messages
             ped_messages += _ped_messages

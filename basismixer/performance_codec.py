@@ -29,7 +29,8 @@ class PerformanceCodec(object):
                  vel_min=30, vel_max=110,
                  init_eq_onset=0.0,
                  remove_trend_vt=True,
-                 remove_trend_lbpr=True):
+                 remove_trend_lbpr=True,
+                 pedal_threshold=60):
         self.vel_min = vel_min
         self.vel_max = vel_max
         self.tempo_ave = float(tempo_ave)
@@ -40,10 +41,11 @@ class PerformanceCodec(object):
         self._lbpr = 0
         self.remove_trend_vt = remove_trend_vt
         self.remove_trend_lbpr = remove_trend_lbpr
-
+        self.pedal_threshold = pedal_threshold
 
     def _decode_step(self, ioi, dur, vt, vd, lbpr,
-                     tim, lart, mel, bpr_a, vel_a, pitch):
+                     tim, lart, mel, bpr_a, vel_a, pitch,
+                     controller_p=1.0):
         """Compute performed onset, duration and MIDI velocity
         for the current onset time.
 
@@ -86,6 +88,7 @@ class PerformanceCodec(object):
         perf_vel : array
             Performed MIDI velocity of the notes in the current score position
         """
+
         # Compute equivalent onset
         eq_onset = self.prev_eq_onset + ((2 ** self._lbpr) * bpr_a) * ioi
 
@@ -104,14 +107,49 @@ class PerformanceCodec(object):
 
         if self.remove_trend_vt:
             _perf_vel = vel_a - vd - self.velocity_ave * vt
-            perf_vel = np.clip(np.round(_perf_vel),
-                               a_min=self.vel_min,
-                               a_max=self.vel_max).astype(np.int)
+            perf_vel = _perf_vel
         else:
-            perf_vel = np.clip(np.round(vt * vel_a - vd),
-                               a_min=self.vel_min,
-                               a_max=self.vel_max).astype(np.int)
+            perf_vel = vt * vel_a - vd
 
+        if mel.sum() > 0:
+            # max velocity
+            vmax = perf_vel.max()
+            # index of the maximal velocity
+            max_ix = np.where(perf_vel == vmax)[0]
+            # velocity of the melody
+            vmel = perf_vel[mel.astype(np.bool)].mean()
+
+            # Set velocity of the melody as the maximal
+            perf_vel[mel.astype(np.bool)] = vmax
+
+            # Adapt the velocity of the accompaniment
+            perf_vel[max_ix] = vmel
+            perf_vel[mel.astype(np.bool)] = vmax
+
+            rel_perf_vel = perf_vel / vmax
+            # adjust scaling of accompaniment
+
+            if controller_p > 0:
+                # TODO:
+                # * add scaling in config file
+                alpha = rel_perf_vel ** (np.exp(5 * controller_p))
+            else:
+                alpha = rel_perf_vel ** controller_p
+
+            # Re-scale velocity
+
+            if vmax <= self.vel_max:
+                perf_vel = alpha * vmax
+            else:
+                perf_vel = alpha * self.vel_max
+
+            # print(np.column_stack(
+            #     (mel, perf_vel, rel_perf_vel, alpha)), controller_p)
+
+        # Clip velocity within the specified range and cast as integer
+        perf_vel = np.clip(np.round(perf_vel),
+                           a_min=self.vel_min,
+                           a_max=self.vel_max).astype(np.int)
         return perf_onset, perf_duration, perf_vel
 
     def _pedal_step(self, ioi, bpr_a):
@@ -123,7 +161,8 @@ class PerformanceCodec(object):
         return ped_onset
 
     def decode_online(self, pitch, ioi, dur, vt, vd, lbpr,
-                      tim, lart, mel, bpr_a, vel_a, ped=None):
+                      tim, lart, mel, bpr_a, vel_a, ped=None,
+                      controller_p=1.0):
         """Decode the expressive performance of the notes at the same
         score position and output the corresponding MIDI messages.
 
@@ -182,7 +221,8 @@ class PerformanceCodec(object):
                                                                       mel=mel,
                                                                       bpr_a=bpr_a,
                                                                       vel_a=vel_a,
-                                                                      pitch=pitch)
+                                                                      pitch=pitch,
+                                                                      controller_p=controller_p)
 
             # Indices to sort the notes according to their onset times
             osix = np.argsort(perf_onset)
@@ -204,15 +244,17 @@ class PerformanceCodec(object):
                 off_messages.append(off_msg)
 
             if ped is not None:
+                ped_val = 127 if ped >= self.pedal_threshold else 0
                 ped_msg = Message('control_change', control=64,
-                                  value=int(ped * 127),
+                                  value=int(ped_val),
                                   time=perf_onset.mean())
                 pedal_messages.append(ped_msg)
 
         elif vt is None and ped is not None:
+            ped_val = 127 if ped >= self.pedal_threshold else 0
             ped_onset = self._pedal_step(ioi, bpr_a)
             ped_msg = Message('control_change', control=64,
-                              value=int(ped * 127),
+                              value=int(ped_val),
                               time=ped_onset)
             pedal_messages.append(ped_msg)
 
@@ -477,14 +519,44 @@ def _build_score_dict(pitches, onsets, durations, melody,
 
             else:
                 pix = unique_onset_idxs[int(perf_ix)]
-                pit = pitches[pix]
-                dur = durations[pix]
-                vt = np.mean(vel_trend[pix])
-                vd = vel_dev[pix]
-                lbpr = np.mean(log_bpr[pix])
-                tim = timing[pix]
-                lart = log_art[pix]
-                mel = melody[pix]
+                # pit = pitches[pix]
+
+                # Get unique pitches for each score onset
+                upit = np.unique(pitches[pix])
+                upit_ix = [pix[np.where(pitches[pix] == up)[0]] for up in upit]
+                # dur = durations[pix]
+
+                # Get indices of the largest durations of unique pitches
+                # for each score onset (for the case of two notes with different
+                # duration but with the same pitch at the same score
+                # position with the same pitch,
+                # like in the Moonlight Sonata)
+                udurmx = []
+                for ud in upit_ix:
+
+                    if len(ud) == 1:
+                        udurmx.append(int(ud))
+
+                    else:
+                        udurmx.append(ud[durations[ud].argmax()])
+
+                udurmx = np.array(udurmx).astype(np.int)
+
+                pit = pitches[udurmx]
+                dur = durations[udurmx]
+                vt = np.mean(vel_trend[udurmx])
+                vd = vel_dev[udurmx]
+                lbpr = np.mean(log_bpr[udurmx])
+                tim = timing[udurmx]
+                lart = log_art[udurmx]
+                mel = melody[udurmx]
+
+                # vt = np.mean(vel_trend[pix])
+                # vd = vel_dev[pix]
+                # lbpr = np.mean(log_bpr[pix])
+                # tim = timing[pix]
+                # lart = log_art[pix]
+                # mel = melody[pix]
 
             if len(ped_ix) == 0:
                 ped = None
