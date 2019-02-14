@@ -1,5 +1,5 @@
 {
-    "velocity_ave": 60, 
+    "velocity_ave": 45, 
     "vel_min": 30, 
     "log_bpr": {
         "std": 0.019615901341052212, 
@@ -21,6 +21,6 @@
         "std": 0.019511356437457977, 
         "mean": 0.0
     }, 
-    "tempo_ave": 2.4
+    "tempo_ave": 2.4,
+    "pedal_threshold": 50
 }
-i

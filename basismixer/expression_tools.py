@@ -29,9 +29,9 @@ def scale_parameters(vt, vd, lbpr, tim, lart, pitch,
     tim_ml = melody_lead(pitch, vel_a) * mel
     tim += tim_ml
 
-    # add dynamics melody lead
-    if mel.sum() > 0:
-        vd[mel.astype(bool)] = np.minimum(vd.min() * 0.8, - 0.2 * vel_a)
+    # # add dynamics melody lead
+    # if mel.sum() > 0:
+    #     vd[mel.astype(bool)] = np.minimum(vd.min() * 0.8, - 0.2 * vel_a)
 
     # Scale parameters
     if remove_trend_vt:
@@ -39,6 +39,12 @@ def scale_parameters(vt, vd, lbpr, tim, lart, pitch,
     else:
         vt = vt ** controller_p
     vd *= controller_p
+
+    # Use linear scale for log BPR
+    # if controller_p > 0:
+    #     lbpr += np.log2(controller_p)
+    # else:
+    #     lbpr *= 0
     lbpr *= controller_p
     tim *= controller_p
     lart *= controller_p
@@ -56,7 +62,9 @@ def scale_parameters_w_controller(vt, vd, lbpr, tim, lart, pitch, mel, ped,
 
     vt = (vt * bm_controller.vt_std.value) + bm_controller.vt_mean.value
     vd = (vd * bm_controller.vd_std.value) + bm_controller.vd_mean.value
-    lbpr = (lbpr * bm_controller.lbpr_std.value) + bm_controller.lbpr_mean.value
+    lbpr = ((lbpr * bm_controller.lbpr_std.value) +
+            bm_controller.lbpr_mean.value)
     tim = (tim * bm_controller.tim_std.value) + bm_controller.tim_mean.value
-    lart = (lart * bm_controller.lart_std.value) + bm_controller.lart_mean.value
+    lart = ((lart * bm_controller.lart_std.value) +
+            bm_controller.lart_mean.value)
     return vt, vd, lbpr, tim, lart, ped, mel
