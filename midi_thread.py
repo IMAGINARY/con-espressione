@@ -116,12 +116,11 @@ class BMThread(threading.Thread):
             'pedal_threshold', pedal_threshold)
 
         # Controller for the effect of the BM (PowerMate)
-        # self.scaler = scaler
+        self.scaler = scaler
 
         # Maximal amount that the scaling affects the
         # parameters of the BM
-        self.max_scaler = self.post_process_config.get('max_scaler',
-                                                       max_scaler)
+        self.max_scaler = self.post_process_config.get('max_scaler', max_scaler)
 
         if 'vel_trend' in self.post_process_config:
             self.remove_trend_vt = self.post_process_config['vel_trend'].get(
@@ -182,11 +181,6 @@ class BMThread(threading.Thread):
         # Initialize controller scaling
         controller_p = 1.0
 
-        # fs = fluidsynth.Synth()
-        # fs.start(driver=self.driver)
-        # sfid = fs.sfload('./sound_font/default.sf2')
-        # fs.program_select(0, sfid, 0, 0)
-
         p_update = None
 
         # iterate over score positions
@@ -236,49 +230,58 @@ class BMThread(threading.Thread):
 
             # Send otuput MIDI messages
             while (len(on_messages) > 0 or len(ped_messages) > 0) and self.play:
-
                 # Send pedal
                 if len(ped_messages) > 0:
                     current_time = time.time() - init_time
+
                     if current_time >= ped_messages[0].time:
-                        # print('pedal cc', 0, 64, ped_messages[0].value)
+                        msg = mido.Message('control_change', channel=0, control=64, value=ped_messages[0].value)
+                        self.midi_outport.send(msg)
                         del ped_messages[0]
 
                 # If there are note off messages, send them
                 if len(off_messages) > 0:
                     # Update current time
                     current_time = time.time() - init_time
+
                     if current_time >= off_messages[0].time:
                         # Update list of currently sounding notes
                         if off_messages[0].note in currently_sounding:
-                            csp_ix = currently_sounding.index(
-                                off_messages[0].note)
+                            csp_ix = currently_sounding.index(off_messages[0].note)
                             del currently_sounding[csp_ix]
+
                         # Send current note off message
-                        # fs.noteoff(0, off_messages[0].note)
+                        msg = mido.Message('note_off', channel=0, note=off_messages[0].note, velocity=0)
+                        self.midi_outport.send(msg)
+
                         # delete note off message from the list
                         del off_messages[0]
 
                 # Send note on messages
                 if len(on_messages) > 0:
                     current_time = time.time() - init_time
+
                     if current_time >= on_messages[0].time:
                         # Check if note is currently on and send a
                         # note off message (and update off_messages
                         # in case it is active.
                         if on_messages[0].note in currently_sounding:
-                            csp_ix = currently_sounding.index(
-                                on_messages[0].note)
+                            csp_ix = currently_sounding.index(on_messages[0].note)
                             del currently_sounding[csp_ix]
+
                             for noi, nomsg in enumerate(off_messages):
                                 if nomsg.note == on_messages[0].note:
                                     # fs.noteoff(0, on_messages[0].note)
+                                    msg = mido.Message('note_off', channel=0, note=on_messages[0].note, velocity=0)
+                                    self.midi_outport.send(msg)
+
                                     del off_messages[noi]
                                     break
                         # Send current note on message
-                        msg = mido.Message('note_on', note=on_messages[0].note, velocity=on_messages[0].velocity)
+                        msg = mido.Message('note_on', channel=0, note=on_messages[0].note, velocity=on_messages[0].velocity)
                         self.midi_outport.send(msg)
                         currently_sounding.append(on_messages[0].note)
+
                         # delete note on message from the list
                         del on_messages[0]
 
@@ -291,8 +294,9 @@ class BMThread(threading.Thread):
         # Send remaining note off messages
         while len(off_messages) > 0 and self.play:
             current_time = time.time() - init_time
+
             if current_time >= off_messages[0].time:
-                msg = mido.Message('note_off', note=off_messages[0].note)
+                msg = mido.Message('note_off', channel=0, note=off_messages[0].note, velocity=0)
                 self.midi_outport.send(msg)
                 del off_messages[0]
 
