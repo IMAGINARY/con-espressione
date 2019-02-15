@@ -9,7 +9,7 @@ import time
 import mido
 import numpy as np
 import json
-# import fluidsynth
+import mido
 import os
 
 from basismixer.performance_codec import (load_bm_preds,
@@ -79,7 +79,7 @@ class MidiThread(threading.Thread):
 
 class BMThread(threading.Thread):
 
-    def __init__(self, bm_precomputed_path, driver,
+    def __init__(self, bm_precomputed_path, driver, midi_out,
                  vel_min=30, vel_max=110,
                  tempo_ave=55,
                  velocity_ave=50,
@@ -89,6 +89,7 @@ class BMThread(threading.Thread):
                  pedal_threshold=60):
         threading.Thread.__init__(self)
 
+        self.midi_outport = midi_out
         self.driver = driver
         self.vel = 64
         self.tempo = 1
@@ -275,7 +276,8 @@ class BMThread(threading.Thread):
                                     del off_messages[noi]
                                     break
                         # Send current note on message
-                        # print('note on', 0, on_messages[0].note, on_messages[0].velocity)
+                        msg = mido.Message('note_on', note=on_messages[0].note, velocity=on_messages[0].velocity)
+                        self.midi_outport.send(msg)
                         currently_sounding.append(on_messages[0].note)
                         # delete note on message from the list
                         del on_messages[0]
@@ -290,10 +292,9 @@ class BMThread(threading.Thread):
         while len(off_messages) > 0 and self.play:
             current_time = time.time() - init_time
             if current_time >= off_messages[0].time:
-                # fs.noteoff(0, off_messages[0].note)
+                msg = mido.Message('note_off', note=off_messages[0].note)
+                self.midi_outport.send(msg)
                 del off_messages[0]
-
-        # fs.delete()
 
     def start_playing(self):
         self.play = True

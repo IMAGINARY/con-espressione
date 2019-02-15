@@ -9,8 +9,10 @@ import platform
 
 
 class LeapControl():
-    def __init__(self, config):
-        self.playback_thread = BMThread(config['bm_file'], driver=config['driver'])
+    def __init__(self, midi_out, config):
+        self.midi_outport = midi_out
+        self.playback_thread = BMThread(config['bm_file'], driver=config['driver'],
+                                        midi_out=self.midi_outport)
         self.playback_thread.set_tempo(1.0)
         self.playback_thread.set_velocity(1.0)
 
@@ -51,25 +53,24 @@ def main():
               'bm_config': 'bm_files/beethoven_op027_no2_mv1_bm_z.json',
               'knob_type': 'PowerMate'}
 
+    midi_lc_out = mido.open_output('LeapControl', virtual=True)
+
     # instantiate LeapControl
-    lc = LeapControl(CONFIG)
+    lc = LeapControl(midi_lc_out, CONFIG)
     lc.play()
 
     # midi_lc_in = mido.open_input('LeapControl-In', virtual=True)
-    # midi_lc_out = mido.open_output('LeapControl-Out', virtual=True)
 
     # listen to MIDI port for Control Changes
-    with mido.open_input('LeapControl-In', virtual=True) as port:
+    with mido.open_input('LeapControl', virtual=True) as port:
         for msg in port:
             if msg.type == 'control_change':
                 if msg.channel == 0:
                     if msg.control == 1:
                         # tempo
-                        print('incoming tempo...')
                         lc.set_tempo(float(msg.value))
                     if msg.control == 2:
                         # velocity
-                        print('incoming velocity...')
                         lc.set_velocity(float(msg.value))
 
 
