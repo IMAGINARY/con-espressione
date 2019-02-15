@@ -9,7 +9,7 @@ import time
 import mido
 import numpy as np
 import json
-import fluidsynth
+# import fluidsynth
 import os
 
 from basismixer.performance_codec import (load_bm_preds,
@@ -50,10 +50,10 @@ class MidiThread(threading.Thread):
 
     def run(self):
 
-        fs = fluidsynth.Synth()
-        fs.start(driver=self.driver)
-        sfid = fs.sfload('./sound_font/default.sf2')
-        fs.program_select(0, sfid, 0, 0)
+        # fs = fluidsynth.Synth()
+        # fs.start(driver=self.driver)
+        # sfid = fs.sfload('./sound_font/default.sf2')
+        # fs.program_select(0, sfid, 0, 0)
 
         for msg in self.midi:
             play_msg = msg
@@ -63,7 +63,7 @@ class MidiThread(threading.Thread):
                     new_vel = int(min(msg.velocity * self.vel_factor, 127))
                     play_msg = msg.copy(velocity=new_vel)
 
-                fs.noteon(0, play_msg.note, play_msg.velocity)
+                # print('note on', 0, play_msg.note, play_msg.velocity)
 
             # does not seem to be necessary
             # if msg.type == 'note_on' and msg.velocity == 0:
@@ -72,7 +72,7 @@ class MidiThread(threading.Thread):
             if not self.play:
                 break
 
-        fs.delete()
+        # fs.delete()
 
         return 0
 
@@ -181,10 +181,10 @@ class BMThread(threading.Thread):
         # Initialize controller scaling
         controller_p = 1.0
 
-        fs = fluidsynth.Synth()
-        fs.start(driver=self.driver)
-        sfid = fs.sfload('./sound_font/default.sf2')
-        fs.program_select(0, sfid, 0, 0)
+        # fs = fluidsynth.Synth()
+        # fs.start(driver=self.driver)
+        # sfid = fs.sfload('./sound_font/default.sf2')
+        # fs.program_select(0, sfid, 0, 0)
 
         p_update = None
 
@@ -240,7 +240,7 @@ class BMThread(threading.Thread):
                 if len(ped_messages) > 0:
                     current_time = time.time() - init_time
                     if current_time >= ped_messages[0].time:
-                        fs.cc(0, 64, ped_messages[0].value)
+                        # print('pedal cc', 0, 64, ped_messages[0].value)
                         del ped_messages[0]
 
                 # If there are note off messages, send them
@@ -254,7 +254,7 @@ class BMThread(threading.Thread):
                                 off_messages[0].note)
                             del currently_sounding[csp_ix]
                         # Send current note off message
-                        fs.noteoff(0, off_messages[0].note)
+                        # fs.noteoff(0, off_messages[0].note)
                         # delete note off message from the list
                         del off_messages[0]
 
@@ -271,12 +271,11 @@ class BMThread(threading.Thread):
                             del currently_sounding[csp_ix]
                             for noi, nomsg in enumerate(off_messages):
                                 if nomsg.note == on_messages[0].note:
-                                    fs.noteoff(0, on_messages[0].note)
+                                    # fs.noteoff(0, on_messages[0].note)
                                     del off_messages[noi]
                                     break
                         # Send current note on message
-                        fs.noteon(0, on_messages[0].note,
-                                  on_messages[0].velocity)
+                        # print('note on', 0, on_messages[0].note, on_messages[0].velocity)
                         currently_sounding.append(on_messages[0].note)
                         # delete note on message from the list
                         del on_messages[0]
@@ -291,10 +290,10 @@ class BMThread(threading.Thread):
         while len(off_messages) > 0 and self.play:
             current_time = time.time() - init_time
             if current_time >= off_messages[0].time:
-                fs.noteoff(0, off_messages[0].note)
+                # fs.noteoff(0, off_messages[0].note)
                 del off_messages[0]
 
-        fs.delete()
+        # fs.delete()
 
     def start_playing(self):
         self.play = True

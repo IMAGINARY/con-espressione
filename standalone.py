@@ -65,9 +65,11 @@ def main():
                 if msg.channel == 0:
                     if msg.control == 1:
                         # tempo
+                        print('incoming tempo...')
                         lc.set_tempo(float(msg.value))
                     if msg.control == 2:
                         # velocity
+                        print('incoming velocity...')
                         lc.set_velocity(float(msg.value))
 
 
