@@ -11,10 +11,12 @@ import platform
 class LeapControl():
     def __init__(self, midi_out, config):
         self.midi_outport = midi_out
-        self.playback_thread = BMThread(config['bm_file'], driver=config['driver'],
-                                        midi_out=self.midi_outport)
+        self.playback_thread = BMThread(config['bm_file'], midi_out=self.midi_outport)
+
+        # init tempo and velocity
         self.playback_thread.set_tempo(1.0)
-        self.playback_thread.set_velocity(1.0)
+        self.playback_thread.set_scaler(0.0)
+        self.playback_thread.set_velocity(50.0)
 
     def select_song(self):
         pass
@@ -23,7 +25,7 @@ class LeapControl():
         self.playback_thread.start()
 
     def stop(self):
-        pass
+        self.playback_thread.stop_playing()
 
     def set_velocity(self, val):
         # scale value in [0, 127] to [0.5, 2]
@@ -42,6 +44,12 @@ class LeapControl():
             out = - (1.0 / 127.0) * val + 1.5
 
         self.playback_thread.set_tempo(out)
+
+    def set_ml_scaler(self, val):
+        # scale value in [0, 127] to [0, 100]
+        out = (100 / 127) * val
+
+        self.playback_thread.set_scaler(out)
 
 
 def main():
@@ -66,12 +74,15 @@ def main():
         for msg in port:
             if msg.type == 'control_change':
                 if msg.channel == 0:
-                    if msg.control == 1:
+                    if msg.control == 20:
                         # tempo
                         lc.set_tempo(float(msg.value))
-                    if msg.control == 2:
+                    if msg.control == 21:
                         # velocity
                         lc.set_velocity(float(msg.value))
+                    if msg.control == 22:
+                        # ml-scaler
+                        lc.set_ml_scaler(float(msg.value))
 
 
 if __name__ == '__main__':

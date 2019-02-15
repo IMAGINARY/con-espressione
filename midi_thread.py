@@ -28,7 +28,6 @@ class MidiThread(threading.Thread):
         self.path_midi = midi_path
         self.midi = None
         self.load_midi(self.path_midi)
-        self.driver = driver
         self.vel_factor = 1
         self.tempo = 1
         self.play = True
@@ -49,11 +48,6 @@ class MidiThread(threading.Thread):
         self.tempo = tempo
 
     def run(self):
-
-        # fs = fluidsynth.Synth()
-        # fs.start(driver=self.driver)
-        # sfid = fs.sfload('./sound_font/default.sf2')
-        # fs.program_select(0, sfid, 0, 0)
 
         for msg in self.midi:
             play_msg = msg
@@ -79,18 +73,16 @@ class MidiThread(threading.Thread):
 
 class BMThread(threading.Thread):
 
-    def __init__(self, bm_precomputed_path, driver, midi_out,
+    def __init__(self, bm_precomputed_path, midi_out,
                  vel_min=30, vel_max=110,
                  tempo_ave=55,
                  velocity_ave=50,
                  deadpan=False,
-                 scaler=None,
                  max_scaler=2.0,
                  pedal_threshold=60):
         threading.Thread.__init__(self)
 
         self.midi_outport = midi_out
-        self.driver = driver
         self.vel = 64
         self.tempo = 1
 
@@ -112,27 +104,25 @@ class BMThread(threading.Thread):
         # Minimal and maximal MIDI velocities allowed for each note
         self.vel_min = self.post_process_config.get('vel_min', vel_min)
         self.vel_max = self.post_process_config.get('vel_max', vel_max)
-        self.pedal_threshold = self.post_process_config.get(
-            'pedal_threshold', pedal_threshold)
+        self.pedal_threshold = self.post_process_config.get('pedal_threshold', pedal_threshold)
 
-        # Controller for the effect of the BM (PowerMate)
-        self.scaler = scaler
+        # Controller for the effect of the BM
+        self.scaler = None
 
         # Maximal amount that the scaling affects the
         # parameters of the BM
         self.max_scaler = self.post_process_config.get('max_scaler', max_scaler)
 
         if 'vel_trend' in self.post_process_config:
-            self.remove_trend_vt = self.post_process_config['vel_trend'].get(
-                'remove_trend', True)
+            self.remove_trend_vt = self.post_process_config['vel_trend'].get('remove_trend', True)
         else:
             self.remove_trend_vt = True
 
         if 'log_bpr' in self.post_process_config:
-            self.remove_trend_lbpr = self.post_process_config['log_bpr'].get(
-                'remove_trend', True)
+            self.remove_trend_lbpr = self.post_process_config['log_bpr'].get('remove_trend', True)
         else:
             self.remove_trend_lbpr = True
+
         # Initialize performance codec
         self.pc = PerformanceCodec(tempo_ave=self.tempo_ave,
                                    velocity_ave=velocity_ave,
@@ -163,6 +153,10 @@ class BMThread(threading.Thread):
             # Test other scalings
             t_scale = sigmoid(tempo) / SIGMOID_1
         self.tempo = t_scale * self.tempo_ave
+
+    def set_scaler(self, scaler):
+        self.scaler = scaler
+        print(scaler)
 
     def run(self):
 
@@ -195,7 +189,7 @@ class BMThread(threading.Thread):
             bpr_a = self.tempo
             vel_a = self.vel
 
-            p_update = 0
+            p_update = self.scaler
 
             if p_update is not None:
                 controller_p = self.max_scaler * p_update / 100
