@@ -156,7 +156,6 @@ class BMThread(threading.Thread):
 
     def set_scaler(self, scaler):
         self.scaler = scaler
-        print(scaler)
 
     def run(self):
 
@@ -207,6 +206,16 @@ class BMThread(threading.Thread):
                     vt, vd, lbpr, tim, lart, self.vis_scaling_factors)
 
                 # TODO: Send vis information via MIDI message
+                msg = mido.Message('control_change', channel=1, control=110, value=int(vts * 127))
+                self.midi_outport.send(msg)
+                msg = mido.Message('control_change', channel=1, control=111, value=int(vds * 127))
+                self.midi_outport.send(msg)
+                msg = mido.Message('control_change', channel=1, control=112, value=int(lbprs * 127))
+                self.midi_outport.send(msg)
+                msg = mido.Message('control_change', channel=1, control=113, value=int(tims * 127))
+                self.midi_outport.send(msg)
+                msg = mido.Message('control_change', channel=1, control=114, value=int(larts * 127))
+                self.midi_outport.send(msg)
 
             # Decode parameters to MIDI messages
             on_messages, _off_messages, _ped_messages = self.pc.decode_online(

@@ -82,10 +82,13 @@ itself should be renamed to `default.sf2`.
 * Control Change, channel=0, control=xx: Play, value=127
 * Control Change, channel=0, control=xx: Stop, value=127
 
-
 ### Outputs
 
-*
+* Control Change, channel=1, control=110: Vis 1, [0, 127]
+* Control Change, channel=1, control=111: Vis 2, [0, 127]
+* Control Change, channel=1, control=112: Vis 3, [0, 127]
+* Control Change, channel=1, control=113: Vis 4, [0, 127]
+* Control Change, channel=1, control=114: Vis 5, [0, 127]
 
 ## Funding
 
