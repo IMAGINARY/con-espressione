@@ -72,6 +72,20 @@ Furthermore, FluidSynth needs a soundfont for playback. This soundfont should
 be located in the folder `sound_font` in the root directory. The soundfont
 itself should be renamed to `default.sf2`.
 
+## MIDI Interface
+
+### Inputs
+
+* Control Change, channel=0, control=1: LeapMotion X coordinate, [0, 127]
+* Control Change, channel=0, control=2: LeapMotion Y coordinate, [0, 127]
+* Control Change, channel=0, control=3: Play, value=127
+* Control Change, channel=0, control=4: Stop, value=127
+
+
+### Outputs
+
+*
+
 ## Funding
 
 This project has received funding from the European Research Council (ERC) under the European Union's Horizon 2020 research and innovation programme (grant agreement number 670035).

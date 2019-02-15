@@ -84,7 +84,7 @@ class BMThread(threading.Thread):
                  tempo_ave=55,
                  velocity_ave=50,
                  deadpan=False,
-                 scaler=None, vis=None,
+                 scaler=None,
                  max_scaler=2.0,
                  pedal_threshold=60):
         threading.Thread.__init__(self)
@@ -93,19 +93,18 @@ class BMThread(threading.Thread):
         self.vel = 64
         self.tempo = 1
 
-        self.post_process_config = json.load(
-            open(bm_precomputed_path.replace('.txt', '.json')))
+        self.post_process_config = json.load(open(bm_precomputed_path.replace('.txt', '.json')))
         pedal_fn = (bm_precomputed_path.replace('.txt', '.pedal')
                     if os.path.exists(bm_precomputed_path.replace('.txt', '.pedal'))
                     else None)
+
         # Construct score-performance dictionary
         self.score_dict = load_bm_preds(bm_precomputed_path,
                                         deadpan=deadpan,
                                         post_process_config=self.post_process_config,
                                         pedal_fn=pedal_fn)
 
-        self.tempo_ave = self.post_process_config.get(
-            'tempo_ave', 60.0 / float(tempo_ave))
+        self.tempo_ave = self.post_process_config.get('tempo_ave', 60.0 / float(tempo_ave))
 
         self.velocity_ave = self.post_process_config.get('velocity_ave',
                                                          velocity_ave)
@@ -116,13 +115,12 @@ class BMThread(threading.Thread):
             'pedal_threshold', pedal_threshold)
 
         # Controller for the effect of the BM (PowerMate)
-        self.scaler = scaler
+        # self.scaler = scaler
 
         # Maximal amount that the scaling affects the
         # parameters of the BM
         self.max_scaler = self.post_process_config.get('max_scaler',
                                                        max_scaler)
-        self.vis = vis
 
         if 'vel_trend' in self.post_process_config:
             self.remove_trend_vt = self.post_process_config['vel_trend'].get(
@@ -147,7 +145,7 @@ class BMThread(threading.Thread):
 
         # Scaling factors for the visualization
         self.vis_scaling_factors = get_vis_scaling_factors(
-            self. score_dict,
+            self.score_dict,
             self.max_scaler,
             remove_trend_vt=self.remove_trend_vt)
 
@@ -165,9 +163,6 @@ class BMThread(threading.Thread):
             # Test other scalings
             t_scale = sigmoid(tempo) / SIGMOID_1
         self.tempo = t_scale * self.tempo_ave
-
-    def set_scaler(self, scalar):
-        self.scalar = scalar
 
     def run(self):
 
@@ -205,7 +200,7 @@ class BMThread(threading.Thread):
             bpr_a = self.tempo
             vel_a = self.vel
 
-            p_update = self.scaler.value
+            p_update = 0
 
             if p_update is not None:
                 controller_p = self.max_scaler * p_update / 100
@@ -221,9 +216,8 @@ class BMThread(threading.Thread):
 
                 vts, vds, lbprs, tims, larts = compute_vis_scaling(
                     vt, vd, lbpr, tim, lart, self.vis_scaling_factors)
-                if self.vis is not None:
-                    for vis, scale in zip(self.vis, [vts, vds, lbprs, tims, larts]):
-                        vis.update_widget(scale)
+
+                # TODO: Send vis information via MIDI message
 
             # Decode parameters to MIDI messages
             on_messages, _off_messages, _ped_messages = self.pc.decode_online(
