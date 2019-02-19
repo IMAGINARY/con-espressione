@@ -246,6 +246,7 @@ class BMThread(threading.Thread):
                 if len(ped_messages) > 0:
                     current_time = time.time() - init_time
                     if current_time >= ped_messages[0].time:
+                        print('pedal message', ped_messages[0].value)
                         fs.cc(0, 64, ped_messages[0].value)
                         del ped_messages[0]
 
