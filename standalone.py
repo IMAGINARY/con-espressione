@@ -19,6 +19,7 @@ class LeapControl():
         self.playback_thread.set_velocity(50.0)
 
     def select_song(self):
+        # TODO
         pass
 
     def play(self):
@@ -63,26 +64,43 @@ def main():
 
     midi_lc_out = mido.open_output('LeapControl', virtual=True)
 
-    # instantiate LeapControl
-    lc = LeapControl(midi_lc_out, CONFIG)
-    lc.play()
+    try:
+        # instantiate LeapControl
+        lc = LeapControl(midi_lc_out, CONFIG)
+        lc.play()
 
-    # midi_lc_in = mido.open_input('LeapControl-In', virtual=True)
+        # midi_lc_in = mido.open_input('LeapControl-In', virtual=True)
 
-    # listen to MIDI port for Control Changes
-    with mido.open_input('LeapControl', virtual=True) as port:
-        for msg in port:
-            if msg.type == 'control_change':
-                if msg.channel == 0:
-                    if msg.control == 20:
-                        # tempo
-                        lc.set_tempo(float(msg.value))
-                    if msg.control == 21:
-                        # velocity
-                        lc.set_velocity(float(msg.value))
-                    if msg.control == 22:
-                        # ml-scaler
-                        lc.set_ml_scaler(float(msg.value))
+        # listen to MIDI port for Control Changes
+        with mido.open_input('LeapControl', virtual=True) as port:
+            for msg in port:
+                if msg.type == 'control_change':
+                    if msg.channel == 0:
+                        if msg.control == 20:
+                            # tempo
+                            lc.set_tempo(float(msg.value))
+                        if msg.control == 21:
+                            # velocity
+                            lc.set_velocity(float(msg.value))
+                        if msg.control == 22:
+                            # ml-scaler
+                            lc.set_ml_scaler(float(msg.value))
+                        if msg.control == 23:
+                            # select song
+                            lc.select_song(int(msg.value))
+                        if msg.control == 24:
+                            # start playing
+                            if int(msg.value) == 127:
+                                lc.play()
+                        if msg.control == 25:
+                            # stop playing
+                            if int(msg.value) == 127:
+                                lc.stop()
+
+    except KeyboardInterrupt:
+        print('Shutting down...')
+        lc.stop()
+        lc.playback_thread.join()
 
 
 if __name__ == '__main__':

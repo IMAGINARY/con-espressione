@@ -79,8 +79,9 @@ itself should be renamed to `default.sf2`.
 * Control Change, channel=0, control=20: LeapMotion X coordinate, [0, 127]
 * Control Change, channel=0, control=21: LeapMotion Y coordinate, [0, 127]
 * Control Change, channel=0, control=22: ML-Scaler, [0, 127]
-* Control Change, channel=0, control=xx: Play, value=127
-* Control Change, channel=0, control=xx: Stop, value=127
+* Control Change, channel=0, control=23: Select Song, [0, 127]
+* Control Change, channel=0, control=24: Play, value=127
+* Control Change, channel=0, control=25: Stop, value=127
 
 ### Outputs
 

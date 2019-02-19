@@ -17,7 +17,6 @@ from basismixer.performance_codec import (load_bm_preds,
 from basismixer.bm_utils import (get_vis_scaling_factors,
                                  compute_vis_scaling, sigmoid,
                                  SIGMOID_1)
-
 from basismixer.expression_tools import scale_parameters
 
 
@@ -63,10 +62,8 @@ class MidiThread(threading.Thread):
             # if msg.type == 'note_on' and msg.velocity == 0:
             #     fs.noteoff(0, play_msg.note)
 
-            if not self.play:
-                break
-
-        # fs.delete()
+            # if not self.play:
+            #     break
 
         return 0
 
@@ -109,8 +106,7 @@ class BMThread(threading.Thread):
         # Controller for the effect of the BM
         self.scaler = None
 
-        # Maximal amount that the scaling affects the
-        # parameters of the BM
+        # Maximal amount that the scaling affects the BM parameters
         self.max_scaler = self.post_process_config.get('max_scaler', max_scaler)
 
         if 'vel_trend' in self.post_process_config:
@@ -134,10 +130,9 @@ class BMThread(threading.Thread):
                                    pedal_threshold=self.pedal_threshold)
 
         # Scaling factors for the visualization
-        self.vis_scaling_factors = get_vis_scaling_factors(
-            self.score_dict,
-            self.max_scaler,
-            remove_trend_vt=self.remove_trend_vt)
+        self.vis_scaling_factors = get_vis_scaling_factors(self.score_dict,
+                                                           self.max_scaler,
+                                                           remove_trend_vt=self.remove_trend_vt)
 
         self.play = True
 
@@ -158,7 +153,6 @@ class BMThread(threading.Thread):
         self.scaler = scaler
 
     def run(self):
-
         # Get unique score positions (and sort them)
         unique_onsets = np.array(list(self.score_dict.keys()))
         unique_onsets.sort()
@@ -205,7 +199,7 @@ class BMThread(threading.Thread):
                 vts, vds, lbprs, tims, larts = compute_vis_scaling(
                     vt, vd, lbpr, tim, lart, self.vis_scaling_factors)
 
-                # TODO: Send vis information via MIDI message
+                # Send vis information via MIDI message
                 msg = mido.Message('control_change', channel=1, control=110, value=int(vts * 127))
                 self.midi_outport.send(msg)
                 msg = mido.Message('control_change', channel=1, control=111, value=int(vds * 127))
@@ -291,9 +285,6 @@ class BMThread(threading.Thread):
                 # sleep for a little bit...
                 time.sleep(5e-4)
 
-            if not self.play:
-                break
-
         # Send remaining note off messages
         while len(off_messages) > 0 and self.play:
             current_time = time.time() - init_time
@@ -308,3 +299,15 @@ class BMThread(threading.Thread):
 
     def stop_playing(self):
         self.play = False
+
+        # send all sounds off signal
+        msg = mido.Message('control_change', channel=0, control=120, value=0)
+        self.midi_outport.send(msg)
+
+        # send all note off signal
+        msg = mido.Message('control_change', channel=0, control=123, value=0)
+        self.midi_outport.send(msg)
+
+        # send Reset All Controllers
+        msg = mido.Message('control_change', channel=0, control=121, value=0)
+        self.midi_outport.send(msg)
