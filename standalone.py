@@ -67,9 +67,6 @@ def main():
     try:
         # instantiate LeapControl
         lc = LeapControl(midi_lc_out, CONFIG)
-        lc.play()
-
-        # midi_lc_in = mido.open_input('LeapControl-In', virtual=True)
 
         # listen to MIDI port for Control Changes
         with mido.open_input('LeapControl', virtual=True) as port:
