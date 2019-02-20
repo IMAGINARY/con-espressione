@@ -47,7 +47,6 @@ class MidiThread(threading.Thread):
         self.tempo = tempo
 
     def run(self):
-
         for msg in self.midi:
             play_msg = msg
             time.sleep(play_msg.time * self.tempo)
@@ -55,15 +54,6 @@ class MidiThread(threading.Thread):
                 if msg.velocity != 0:
                     new_vel = int(min(msg.velocity * self.vel_factor, 127))
                     play_msg = msg.copy(velocity=new_vel)
-
-                # print('note on', 0, play_msg.note, play_msg.velocity)
-
-            # does not seem to be necessary
-            # if msg.type == 'note_on' and msg.velocity == 0:
-            #     fs.noteoff(0, play_msg.note)
-
-            # if not self.play:
-            #     break
 
         return 0
 
@@ -82,6 +72,7 @@ class BMThread(threading.Thread):
         self.midi_outport = midi_out
         self.vel = 64
         self.tempo = 1
+        self.reached_end = False
 
         self.post_process_config = json.load(open(bm_precomputed_path.replace('.txt', '.json')))
         pedal_fn = (bm_precomputed_path.replace('.txt', '.pedal')
@@ -144,8 +135,7 @@ class BMThread(threading.Thread):
         if tempo <= 1:
             t_scale = tempo
         if tempo > 1:
-            # TODO:
-            # Test other scalings
+            # TODO: Test other scalings
             t_scale = sigmoid(tempo) / SIGMOID_1
         self.tempo = t_scale * self.tempo_ave
 
@@ -294,11 +284,25 @@ class BMThread(threading.Thread):
                 self.midi_outport.send(msg)
                 del off_messages[0]
 
+        # send reached end signal
+        self.reached_end = True
+        msg = mido.Message('control_change', channel=1, control=115, value=int(127))
+        self.midi_outport.send(msg)
+
+        return self.reached_end
+
     def start_playing(self):
         self.play = True
 
     def stop_playing(self):
-        self.play = False
+        # TODO: check if this is necessary in final
+        # release pedal
+        msg = mido.Message('control_change', channel=0, control=64, value=0)
+        self.midi_outport.send(msg)
+
+        for cur_note in range(127):
+            msg = mido.Message('note_off', channel=0, note=cur_note, velocity=0)
+            self.midi_outport.send(msg)
 
         # send all sounds off signal
         msg = mido.Message('control_change', channel=0, control=120, value=0)
@@ -311,3 +315,5 @@ class BMThread(threading.Thread):
         # send Reset All Controllers
         msg = mido.Message('control_change', channel=0, control=121, value=0)
         self.midi_outport.send(msg)
+
+        self.play = False

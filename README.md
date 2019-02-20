@@ -90,6 +90,7 @@ itself should be renamed to `default.sf2`.
 * Control Change, channel=1, control=112: Vis 3, [0, 127]
 * Control Change, channel=1, control=113: Vis 4, [0, 127]
 * Control Change, channel=1, control=114: Vis 5, [0, 127]
+* Control Change, channel=1, control=115: End of a song signal, value=127
 
 ## Funding
 
