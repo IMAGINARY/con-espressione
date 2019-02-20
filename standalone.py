@@ -18,9 +18,9 @@ class LeapControl():
         self.playback_thread.set_scaler(0.0)
         self.playback_thread.set_velocity(50.0)
 
-    def select_song(self):
+    def select_song(self, val):
         # TODO
-        pass
+        print('Selecting song {}. To be implemented'.format(val))
 
     def play(self):
         self.playback_thread.start()
