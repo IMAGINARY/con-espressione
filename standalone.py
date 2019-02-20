@@ -50,7 +50,8 @@ class LeapControl():
         if val > 64:
             out = (2.0 / 127.0) * val
 
-        self.playback_thread.set_velocity(out)
+        if self.playback_thread != None:
+            self.playback_thread.set_velocity(out)
 
     def set_tempo(self, val):
         # scale value in [0, 127] to [0.5, 2]
@@ -59,13 +60,15 @@ class LeapControl():
         if val > 64:
             out = - (1.0 / 127.0) * val + 1.5
 
-        self.playback_thread.set_tempo(out)
+        if self.playback_thread != None:
+            self.playback_thread.set_tempo(out)
 
     def set_ml_scaler(self, val):
         # scale value in [0, 127] to [0, 100]
         out = (100 / 127) * val
 
-        self.playback_thread.set_scaler(out)
+        if self.playback_thread != None:
+            self.playback_thread.set_scaler(out)
 
     def parse_midi_msg(self, msg):
         if msg.type == 'control_change':
