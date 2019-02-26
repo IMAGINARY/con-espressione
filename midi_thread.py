@@ -112,7 +112,7 @@ class BMThread(threading.Thread):
 
         # Initialize performance codec
         self.pc = PerformanceCodec(tempo_ave=self.tempo_ave,
-                                   velocity_ave=velocity_ave,
+                                   velocity_ave=self.velocity_ave,
                                    init_eq_onset=0.5,
                                    vel_min=self.vel_min,
                                    vel_max=self.vel_max,
