@@ -29,19 +29,20 @@ class LeapControl():
     def play(self):
         # terminate playback thread if running
         if self.playback_thread != None:
-            self.playback_thread.join()
+            self.stop()
 
         # init playback thread
         self.playback_thread = BMThread(self.cur_song, midi_out=self.midi_outport)
         self.playback_thread.set_tempo(1.0)
         self.playback_thread.set_scaler(0.0)
         self.playback_thread.set_velocity(50.0)
-
+        self.playback_thread.start_playing()
         self.playback_thread.start()
 
     def stop(self):
         if self.playback_thread != None:
             self.playback_thread.stop_playing()
+            self.playback_thread.join()
 
     def set_velocity(self, val):
         # scale value in [0, 127] to [0.5, 2]

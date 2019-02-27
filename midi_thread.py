@@ -87,9 +87,8 @@ class BMThread(threading.Thread):
                                         pedal_fn=pedal_fn)
 
         self.tempo_ave = self.post_process_config.get('tempo_ave', tempo_ave)
+        self.velocity_ave = self.post_process_config.get('velocity_ave', velocity_ave)
 
-        self.velocity_ave = self.post_process_config.get('velocity_ave',
-                                                         velocity_ave)
         # Minimal and maximal MIDI velocities allowed for each note
         self.vel_min = self.post_process_config.get('vel_min', vel_min)
         self.vel_max = self.post_process_config.get('vel_max', vel_max)
@@ -128,8 +127,7 @@ class BMThread(threading.Thread):
         self.vis_scaling_factors = get_vis_scaling_factors(self.score_dict,
                                                            self.max_scaler,
                                                            remove_trend_vt=self.remove_trend_vt)
-
-        self.play = True
+        self.play = False
 
     def set_velocity(self, vel):
         self.vel = vel * self.velocity_ave
@@ -166,7 +164,6 @@ class BMThread(threading.Thread):
 
         # iterate over score positions
         for on in unique_onsets:
-
             # Get score and performance info
             (pitch, ioi, dur,
              vt, vd, lbpr,
@@ -181,7 +178,7 @@ class BMThread(threading.Thread):
             if p_update is not None:
                 controller_p = self.max_scaler * p_update / 100
 
-            if vt is not None:
+            if vt is not None and self.play:
                 # Scale bm parameters
                 vt, vd, lbpr, tim, lart, ped, mel = scale_parameters(
                     vt=vt, vd=vd, lbpr=lbpr,
