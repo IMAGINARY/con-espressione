@@ -66,7 +66,8 @@ class BMThread(threading.Thread):
                  velocity_ave=50,
                  deadpan=False,
                  max_scaler=2.0,
-                 pedal_threshold=60):
+                 pedal_threshold=60,
+                 mel_lead_exag_coeff=1.0):
         threading.Thread.__init__(self)
 
         self.midi_outport = midi_out
@@ -85,7 +86,7 @@ class BMThread(threading.Thread):
                                         post_process_config=self.post_process_config,
                                         pedal_fn=pedal_fn)
 
-        self.tempo_ave = self.post_process_config.get('tempo_ave', 60.0 / float(tempo_ave))
+        self.tempo_ave = self.post_process_config.get('tempo_ave', tempo_ave)
 
         self.velocity_ave = self.post_process_config.get('velocity_ave',
                                                          velocity_ave)
@@ -93,6 +94,8 @@ class BMThread(threading.Thread):
         self.vel_min = self.post_process_config.get('vel_min', vel_min)
         self.vel_max = self.post_process_config.get('vel_max', vel_max)
         self.pedal_threshold = self.post_process_config.get('pedal_threshold', pedal_threshold)
+        self.mel_lead_exag_coeff = self.post_process_config.get('mel_lead_exag_coeff',
+                                                                mel_lead_exag_coeff)
 
         # Controller for the effect of the BM
         self.scaler = None
@@ -118,7 +121,8 @@ class BMThread(threading.Thread):
                                    vel_max=self.vel_max,
                                    remove_trend_vt=self.remove_trend_vt,
                                    remove_trend_lbpr=self.remove_trend_lbpr,
-                                   pedal_threshold=self.pedal_threshold)
+                                   pedal_threshold=self.pedal_threshold,
+                                   mel_lead_exag_coeff=self.mel_lead_exag_coeff)
 
         # Scaling factors for the visualization
         self.vis_scaling_factors = get_vis_scaling_factors(self.score_dict,

@@ -1,10 +1,6 @@
 """
     Helper methods to load the precomputed performance and score information
     from the Basis Mixer.
-
-    TODO
-    ----
-    * Add melody lead
 """
 import numpy as np
 from mido import Message
@@ -30,7 +26,8 @@ class PerformanceCodec(object):
                  init_eq_onset=0.0,
                  remove_trend_vt=True,
                  remove_trend_lbpr=True,
-                 pedal_threshold=60):
+                 pedal_threshold=60,
+                 mel_lead_exag_coeff=5):
         self.vel_min = vel_min
         self.vel_max = vel_max
         self.tempo_ave = float(tempo_ave)
@@ -42,6 +39,7 @@ class PerformanceCodec(object):
         self.remove_trend_vt = remove_trend_vt
         self.remove_trend_lbpr = remove_trend_lbpr
         self.pedal_threshold = pedal_threshold
+        self.mel_lead_exag_coeff = mel_lead_exag_coeff
 
     def _decode_step(self, ioi, dur, vt, vd, lbpr,
                      tim, lart, mel, bpr_a, vel_a, pitch,
@@ -91,7 +89,6 @@ class PerformanceCodec(object):
 
         # Compute equivalent onset
         eq_onset = self.prev_eq_onset + ((2 ** self._lbpr) * bpr_a) * ioi
-
         self._lbpr = lbpr
 
         # Compute onset for all notes in the current score position
@@ -115,7 +112,8 @@ class PerformanceCodec(object):
             # max velocity
             vmax = perf_vel.max()
             # index of the maximal velocity
-            max_ix = np.where(perf_vel == vmax)[0]
+            # max_ix = np.where(perf_vel == vmax)[0]
+            max_ix = perf_vel.argmax()
             # velocity of the melody
             vmel = perf_vel[mel.astype(np.bool)].mean()
 
@@ -129,10 +127,10 @@ class PerformanceCodec(object):
             rel_perf_vel = perf_vel / vmax
             # adjust scaling of accompaniment
 
-            if controller_p > 0:
+            if controller_p > 1.0:
                 # TODO:
-                # * add scaling in config file
-                alpha = rel_perf_vel ** (np.exp(5 * controller_p))
+                # * check for precision errors
+                alpha = np.nan_to_num(rel_perf_vel ** (1 + np.tanh(self.mel_lead_exag_coeff * controller_p - 1)))
             else:
                 alpha = rel_perf_vel ** controller_p
 
@@ -143,13 +141,10 @@ class PerformanceCodec(object):
             else:
                 perf_vel = alpha * self.vel_max
 
-            # print(np.column_stack(
-            #     (mel, perf_vel, rel_perf_vel, alpha)), controller_p)
-
         # Clip velocity within the specified range and cast as integer
         perf_vel = np.clip(np.round(perf_vel),
                            a_min=self.vel_min,
-                           a_max=self.vel_max).astype(np.int)
+                           a_max=self.vel_max).astype(np.int8)
         return perf_onset, perf_duration, perf_vel
 
     def _pedal_step(self, ioi, bpr_a):
@@ -162,7 +157,7 @@ class PerformanceCodec(object):
 
     def decode_online(self, pitch, ioi, dur, vt, vd, lbpr,
                       tim, lart, mel, bpr_a, vel_a, ped=None,
-                      controller_p=1.0):
+                      controller_p=0.0):
         """Decode the expressive performance of the notes at the same
         score position and output the corresponding MIDI messages.
 
@@ -260,7 +255,9 @@ class PerformanceCodec(object):
 
         return on_messages, off_messages, pedal_messages
 
-    def decode_offline(self, score_dict, return_s_onsets=False):
+    def decode_offline(self, score_dict, return_s_onsets=False,
+                       vt_trend=None,
+                       lbpr_trend=None):
 
         # Get unique score positions (and sort them)
         unique_onsets = np.array(list(score_dict.keys()))
@@ -273,7 +270,9 @@ class PerformanceCodec(object):
         velocities = []
         s_onsets = []
         pedal = []
-        for on in unique_onsets:
+
+        so_counter = 0
+        for i, on in enumerate(unique_onsets):
             (pitch, ioi, dur,
              vt, vd, lbpr,
              tim, lart, mel, ped) = score_dict[on]
@@ -288,8 +287,8 @@ class PerformanceCodec(object):
                     tim=tim,
                     lart=lart,
                     mel=mel,
-                    bpr_a=self.tempo_ave,
-                    vel_a=self.velocity_ave,
+                    bpr_a=self.tempo_ave if lbpr_trend is None else lbpr_trend[so_counter],
+                    vel_a=self.velocity_ave if vt_trend is None else vt_trend[so_counter],
                     pitch=pitch)
 
                 pitches.append(pitch)
@@ -297,6 +296,7 @@ class PerformanceCodec(object):
                 durations.append(perf_duration)
                 velocities.append(perf_vel)
                 s_onsets.append(np.ones_like(perf_onset) * on)
+                so_counter += 1
 
                 if ped is not None:
                     pedal.append((perf_onset.mean(), ped))
@@ -328,7 +328,7 @@ class PerformanceCodec(object):
 
 
 def load_bm_preds(filename, deadpan=False, post_process_config={},
-                  pedal_fn=None):
+                  pedal_fn=None, return_trends=False):
     """Loads precomputed predictions of the Basis Mixer.
 
     Parameters
@@ -347,7 +347,10 @@ def load_bm_preds(filename, deadpan=False, post_process_config={},
          8:melody)
     """
     # Load predictions file
-    bm_data = np.loadtxt(filename)
+    if isinstance(filename, str):
+        bm_data = np.loadtxt(filename)
+    elif isinstance(filename, np.ndarray):
+        bm_data = filename.copy()
     # Score information
     pitches = bm_data[:, 0].astype(np.int)
     onsets = bm_data[:, 1]
@@ -360,7 +363,10 @@ def load_bm_preds(filename, deadpan=False, post_process_config={},
     unique_onsets, unique_onset_idxs = get_unique_onsets(onsets)
 
     if pedal_fn is not None:
-        pedal = np.loadtxt(pedal_fn)
+        if isinstance(pedal_fn, str):
+            pedal = np.loadtxt(pedal_fn)
+        elif isinstance(pedal_fn, np.ndarray):
+            pedal = pedal_fn.copy()
     else:
         pedal = None
 
@@ -368,8 +374,9 @@ def load_bm_preds(filename, deadpan=False, post_process_config={},
         # Performance information (expressive parameters)
 
         # Minmax velocity trend
-        _vel_trend = minmax_normalize(
-            np.array([bm_data[ix, 3].mean() for ix in unique_onset_idxs]))
+        # _vel_trend = minmax_normalize(
+        #     np.array([bm_data[ix, 3].mean() for ix in unique_onset_idxs]))
+        _vel_trend = np.array([bm_data[ix, 3].mean() for ix in unique_onset_idxs])
 
         if 'vel_trend' in post_process_config:
             exag_exp = post_process_config['vel_trend'].get('exag_exp', 1.0)
@@ -381,9 +388,13 @@ def load_bm_preds(filename, deadpan=False, post_process_config={},
 
         if remove_trend_vt:
             _vt_mean = _vel_trend.mean()
-            _vel_trend = remove_trend(_vel_trend, unique_onsets) / _vt_mean
+            _vel_trend, vel_trend_trend = remove_trend(_vel_trend, unique_onsets,
+                                                       return_smoothed_param=True)
+            _vel_trend /= _vt_mean
+            # vel_trend_trend /= _vt_mean
         else:
             _vel_trend /= _vel_trend.mean()
+            vel_trend_trend = None
 
         vel_trend = np.ones(len(bm_data), dtype=np.float)
         for vt, ix in zip(_vel_trend, unique_onset_idxs):
@@ -408,10 +419,13 @@ def load_bm_preds(filename, deadpan=False, post_process_config={},
                 'remove_trend', True)
 
             if remove_trend_lbpr:
-                _log_bpr = remove_trend(_log_bpr, unique_onsets) * lb_std
+                _log_bpr, log_bpr_trend = remove_trend(_log_bpr, unique_onsets,
+                                                       return_smoothed_param=True)
+                _log_bpr *= lb_std
             else:
                 _log_bpr = standardize(_log_bpr)
                 _log_bpr = (_log_bpr * lb_std) + lb_mean
+                log_bpr_trend = None
 
         else:
             _log_bpr = remove_trend(_log_bpr, unique_onsets)
@@ -445,9 +459,14 @@ def load_bm_preds(filename, deadpan=False, post_process_config={},
         timing = np.zeros(n_notes)
         log_art = np.zeros(n_notes)
 
-    return _build_score_dict(pitches, onsets, durations, melody,
-                             vel_trend, vel_dev, log_bpr,
-                             timing, log_art, pedal=pedal)
+    score_dict = _build_score_dict(pitches, onsets, durations, melody,
+                                   vel_trend, vel_dev, log_bpr,
+                                   timing, log_art, pedal=pedal)
+    if return_trends:
+        return score_dict, vel_trend_trend, log_bpr_trend
+
+    else:
+        return score_dict
 
 
 def _build_score_dict(pitches, onsets, durations, melody,
