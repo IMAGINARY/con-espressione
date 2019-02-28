@@ -109,6 +109,7 @@ class PerformanceCodec(object):
             perf_vel = vt * vel_a - vd
 
         if mel.sum() > 0:
+            eps = 0.1
             # max velocity
             vmax = perf_vel.max()
             # index of the maximal velocity
@@ -118,19 +119,19 @@ class PerformanceCodec(object):
             vmel = perf_vel[mel.astype(np.bool)].mean()
 
             # Set velocity of the melody as the maximal
-            perf_vel[mel.astype(np.bool)] = vmax
+            perf_vel[mel.astype(np.bool)] = vmax + eps
 
             # Adapt the velocity of the accompaniment
-            perf_vel[max_ix] = vmel
+            perf_vel[max_ix] = vmel - eps
             perf_vel[mel.astype(np.bool)] = vmax
 
-            rel_perf_vel = perf_vel / vmax
+            rel_perf_vel = np.maximum(perf_vel / vmax, 0)
             # adjust scaling of accompaniment
 
             if controller_p > 1.0:
                 # TODO:
                 # * check for precision errors
-                alpha = np.nan_to_num(rel_perf_vel ** (1 + np.tanh(self.mel_lead_exag_coeff * controller_p - 1)))
+                alpha = np.nan_to_num(rel_perf_vel ** np.exp(self.mel_lead_exag_coeff * (controller_p - 1)))
             else:
                 alpha = rel_perf_vel ** controller_p
 

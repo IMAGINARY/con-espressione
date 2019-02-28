@@ -1,24 +1,24 @@
 {
-    "velocity_ave": 70, 
-    "vel_min": 30, 
+    "velocity_ave": 50, 
+    "vel_min": 25, 
     "log_bpr": {
         "std": 0.058320385329697536, 
         "mean": 0.0
     }, 
-    "vel_max": 100, 
+    "vel_max": 80, 
     "vel_trend": {
         "exag_exp": 1.0
     }, 
     "log_art": {
         "std": 0.04201191652882495, 
-        "mean": 0.0
+        "mean": -0.5
     }, 
     "vel_dev": {
         "std": 3.606930314693573, 
-        "mean": 5
+        "mean": 3
     }, 
     "timing": {
-        "std": 0.01679612724510639, 
+        "std": 0.005, 
         "mean": 0.0
     }, 
     "tempo_ave": 0.75

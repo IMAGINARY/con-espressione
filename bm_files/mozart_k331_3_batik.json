@@ -15,12 +15,13 @@
         "std": 0.024342371531603124
     },
     "log_art": {
-        "mean": -1.3614159468568894,
+	"mean": -0.1,
         "std": 1.1714277667763466
     },
     "tempo_ave": 0.45351558431951217,
-    "vel_max": 99.0,
-    "vel_min": 8.0,
-    "velocity_ave": 65.22892761230469,
-    "pedal_threshold": 50
+    "vel_max": 75.0,
+    "vel_min": 30,
+    "velocity_ave": 50.0,
+    "pedal_threshold": 50,
+    "mel_lead_exag_coeff": 1.0
 }

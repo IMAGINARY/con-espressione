@@ -20,8 +20,8 @@
     },
     "tempo_ave": 1.4,
     "vel_max": 87.0,
-    "vel_min": 7.0,
+    "vel_min": 25,
     "velocity_ave": 45.534217834472656,
     "pedal_threshold": 40,
-    "mel_lead_exag_coeff": 0.5
+    "mel_lead_exag_coeff": 2.0
 }
