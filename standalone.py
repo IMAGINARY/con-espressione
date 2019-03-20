@@ -10,7 +10,7 @@ import platform
 class LeapControl():
     def __init__(self, config, song_list):
         self.midi_outport = mido.open_output('LeapControl', virtual=True)
-        self.midi_inport =  mido.open_input('LeapControl', virtual=True)
+        self.midi_inport = mido.open_input('LeapControl', virtual=True)
 
         self.song_list = song_list
         self.cur_song_id = 0
@@ -28,7 +28,7 @@ class LeapControl():
 
     def play(self):
         # terminate playback thread if running
-        if self.playback_thread != None:
+        if self.playback_thread is not None:
             self.stop()
 
         # init playback thread
@@ -40,7 +40,7 @@ class LeapControl():
         self.playback_thread.start()
 
     def stop(self):
-        if self.playback_thread != None:
+        if self.playback_thread is not None:
             self.playback_thread.stop_playing()
             self.playback_thread.join()
 
@@ -51,7 +51,7 @@ class LeapControl():
         if val > 64:
             out = (2.0 / 127.0) * val
 
-        if self.playback_thread != None:
+        if self.playback_thread is not None:
             self.playback_thread.set_velocity(out)
 
     def set_tempo(self, val):
@@ -61,17 +61,22 @@ class LeapControl():
         if val > 64:
             out = - (1.0 / 127.0) * val + 1.5
 
-        if self.playback_thread != None:
+        if self.playback_thread is not None:
             self.playback_thread.set_tempo(out)
 
     def set_ml_scaler(self, val):
         # scale value in [0, 127] to [0, 100]
         out = (100 / 127) * val
 
-        if self.playback_thread != None:
+        if self.playback_thread is not None:
             self.playback_thread.set_scaler(out)
 
     def parse_midi_msg(self, msg):
+        print(msg)
+        if msg.type == 'song_select':
+            # select song
+            print('Received Song change. New value: {}'.format(msg.song))
+            self.select_song(int(msg.song))
         if msg.type == 'control_change':
             if msg.channel == 0:
                 if msg.control == 20:
@@ -83,10 +88,6 @@ class LeapControl():
                 if msg.control == 22:
                     # ml-scaler
                     self.set_ml_scaler(float(msg.value))
-                if msg.control == 23:
-                    # select song
-                    print('Received Song change. New value: {}'.format(msg.value))
-                    self.select_song(int(msg.value))
                 if msg.control == 24:
                     # start playing
                     print('Received Play command. New value: {}'.format(msg.value))
@@ -107,7 +108,9 @@ def main():
               'bm_config': 'bm_files/beethoven_op027_no2_mv1_bm_z.json'}
 
     SONG_LIST = ['bm_files/beethoven_op027_no2_mv1_bm_z.txt',
-                 'bm_files/chopin_op10_No3_bm_magaloff.txt']
+                 'bm_files/chopin_op10_No3_bm_magaloff.txt',
+                 'bm_files/mozart_k331_3_batik.txt',
+                 'bm_files/beethoven_fuer_elise.txt']
 
     # instantiate LeapControl
     lc = LeapControl(CONFIG, SONG_LIST)
@@ -116,14 +119,16 @@ def main():
         # listen to input MIDI port for messages
         for msg in lc.midi_inport:
             lc.parse_midi_msg(msg)
-
+    except AttributeError as e:
+        print('Received unrecognized MIDI message.')
+        print(e)
     except KeyboardInterrupt:
         print('Received keyboard interrupt. Shutting down...')
-
     finally:
         # clean-up
         lc.stop()
-        lc.playback_thread.join()
+        if lc.playback_thread is not None:
+            lc.playback_thread.join()
         lc.midi_outport.close()
         lc.midi_inport.close()
 
