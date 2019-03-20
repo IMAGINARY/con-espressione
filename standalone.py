@@ -20,6 +20,10 @@ class LeapControl():
         self.playback_thread = None
 
     def select_song(self, val):
+        # terminate playback thread if running
+        if self.playback_thread is not None:
+            self.stop()
+
         val = int(val)
 
         if val < len(self.song_list):
@@ -72,7 +76,7 @@ class LeapControl():
             self.playback_thread.set_scaler(out)
 
     def parse_midi_msg(self, msg):
-        print(msg)
+        # print(msg)
         if msg.type == 'song_select':
             # select song
             print('Received Song change. New value: {}'.format(msg.song))
