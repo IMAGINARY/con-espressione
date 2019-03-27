@@ -18,12 +18,12 @@ def get_unique_onsets(onsets):
     Returns
     -------
     unique_onsets : np.ndarray
-        Unique score onset times (in ascending order). `unique_onsets` 
+        Unique score onset times (in ascending order). `unique_onsets`
         should be identical to `onsets` for strictly monophonic pieces
         (and assuming that the onsets are ordered).
     unique_onset_idxs : list of np.ndarrays
         list contaning the indices of the notes corresponding to each
-        unique score position (in the same order, e.g. 
+        unique score position (in the same order, e.g.
         `unique_onset_idxs[0]` corresponds to the indices of the notes
          occurring at `unique_onsets[0]`).
     """
@@ -108,7 +108,7 @@ def sgf_smooth(y, ws=51, order=5):
     y : np.ndarray
         Data to be filtered.
     ws : int, optional
-        Window size of the filter window (must be a possitive odd integer). 
+        Window size of the filter window (must be a possitive odd integer).
         (Default 51)
     order : int, optional
         Order of the polynomial used to fit the samples. (default is 5).
@@ -287,8 +287,8 @@ def get_vis_scaling_factors(score_dict, max_scaler, eps=1e-10,
         vt_max = vel_trend.max() ** max_scaler
         vt_min = vel_trend.min() ** max_scaler
 
-    vd_max = - max_scaler * vel_devc.max()
-    vd_min = - max_scaler * vel_devc.min()
+    vd_max = max_scaler * vel_devc.max()
+    vd_min = max_scaler * vel_devc.min()
 
     lbpr_max = max_scaler * log_bpr.max()
     lbpr_min = max_scaler * log_bpr.min()
@@ -368,7 +368,7 @@ def compute_vis_scaling(vt, vd, lbpr, tim, lart,
 
 
 def _scale_vis(x, x_min, x_max):
-    """Compute size of the column of the visualization of a parameter 
+    """Compute size of the column of the visualization of a parameter
        (so that parameters lie between 0 and 1).
 
     Parameters
@@ -397,11 +397,13 @@ def _scale_vis(x, x_min, x_max):
     elif x_p > 0:
         # If the parameters are larger than the mean, make them lie between
         # 0.5 and 1.
-        xs = 0.5 * ((x_p - x_min) / (x_max - x_min) + 1)
+        # xs = 0.5 * ((x_p - x_min) / (x_max - x_min) + 1)
+        xs = 0.5 * x_p / x_max + 0.5
     elif x_p < 0 and not np.isclose(x_min, 0):
         # If the parameters are smaller than the mean, make them lie between
         # 0 and 0.5
-        xs = -0.5 * (x_p - x_min) / (x_min)
+        # xs = -0.5 * (x_p - x_min) / (x_min)
+        xs = 0.5 * x_p / x_min
     else:
         # Do not break in case a numerical error (such as the parameters being
         # NAN).

@@ -1,7 +1,9 @@
 """
     Run the Demo
 """
+import argparse
 import os
+import logging
 import mido
 from midi_thread import BMThread
 import platform
@@ -76,10 +78,9 @@ class LeapControl():
             self.playback_thread.set_scaler(out)
 
     def parse_midi_msg(self, msg):
-        # print(msg)
         if msg.type == 'song_select':
             # select song
-            print('Received Song change. New value: {}'.format(msg.song))
+            logging.debug('Received Song change. New value: {}'.format(msg.song))
             self.select_song(int(msg.song))
         if msg.type == 'control_change':
             if msg.channel == 0:
@@ -94,12 +95,12 @@ class LeapControl():
                     self.set_ml_scaler(float(msg.value))
                 if msg.control == 24:
                     # start playing
-                    print('Received Play command. New value: {}'.format(msg.value))
+                    logging.debug('Received Play command. New value: {}'.format(msg.value))
                     if int(msg.value) == 127:
                         self.play()
                 if msg.control == 25:
                     # stop playing
-                    print('Received Stop command. New value: {}'.format(msg.value))
+                    logging.debug('Received Stop command. New value: {}'.format(msg.value))
                     if int(msg.value) == 127:
                         self.stop()
 
@@ -138,4 +139,13 @@ def main():
 
 
 if __name__ == '__main__':
+    parser = argparse.ArgumentParser(description='Backend for BM-Application.')
+    parser.add_argument('--verbose', help='Print Debug logs.', action='store_true')
+    args = parser.parse_args()
+
+    # set logging level
+    if args.verbose:
+        logging.basicConfig(level=logging.DEBUG)
+
+    # start backend
     main()
