@@ -1,4 +1,4 @@
-# Expressiveness backend
+# Con Espressione
 
 Mimicking real performances from sheet music with the computer constitutes a
 challenging research problem. There exist a few systems which are either
@@ -23,6 +23,9 @@ We recommend Anaconda to fullfill the Python requirements.
 All needed packages can be installed through:
 
 ```
+    git clone ###REPO-URL###
+    git submodule init
+    git submodule update
     conda env create -f environment.yml
 ```
 
@@ -38,8 +41,8 @@ environment:
 ## Run
 
 ```
-    source activate expressiveness
-    python expressiveness.py
+    source activate con_espressione
+    python con_espressione.py
 ```
 
 ## Playback
@@ -54,7 +57,7 @@ information.
 
 ## MIDI Interface
 
-The MIDI device name to connect to is `expressiveness-backend`.
+The MIDI device name to connect to is `con-espressione-backend`.
 
 ### Inputs
 
@@ -76,9 +79,8 @@ The MIDI device name to connect to is `expressiveness-backend`.
 
 ## Frontends
 
-This software serves as a backend and should be combined with a frontend for user interaction. Available frontends are
- - https://github.com/IMAGINARY/expressiveness-ui
- - https://github.com/stefan-balke/LeapControl
+This software serves as a backend and should be combined with a frontend for user interaction (https://github.com/IMAGINARY/expressiveness-ui)
+which is embedded in this repository as a submodule in the folder `web-ui`.
 
 ## Funding
 
@@ -86,8 +88,8 @@ This project has received funding from the European Research Council (ERC) under
 
 ## References
 
-Carlos E. Cancino-Chacón1, Maarten Grachten, Werner Goebl and Gerhard Widmer:
-Computational Models of Expressive Music Performance: A Comprehensive and Critical Review. In Frontiers in Digital Humanities, 5:25. doi: 10.3389/fdigh.2018.00025
+> Carlos E. Cancino-Chacón, Maarten Grachten, Werner Goebl and Gerhard Widmer:<br />
+*Computational Models of Expressive Music Performance: A Comprehensive and Critical Review.*<br />In Frontiers in Digital Humanities, 5:25. doi: 10.3389/fdigh.2018.00025
 
 ## License
 

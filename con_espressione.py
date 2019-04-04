@@ -11,8 +11,8 @@ import platform
 
 class LeapControl():
     def __init__(self, config, song_list):
-        self.midi_outport = mido.open_output('expressiveness-backend', virtual=True)
-        self.midi_inport = mido.open_input('expressiveness-backend', virtual=True)
+        self.midi_outport = mido.open_output('con-espressione-backend', virtual=True)
+        self.midi_inport = mido.open_input('con-espressione-backend', virtual=True)
 
         self.song_list = song_list
         self.cur_song_id = 0
