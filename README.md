@@ -1,85 +1,67 @@
-# LeapControl
+# Expressiveness backend
 
 Mimicking real performances from sheet music with the computer constitutes a
 challenging research problem. There exist a few systems which are either
 rule-based---following common performance rules in classical music---or
-driven by learnd performance models.
-LeapControl wraps such a data-driven performance model
-(called the Non-linear Basis Mixer) in an interactive user interface.
-Through the LeapMotion sensor, the user is able to control
+driven by learned performance models.
+This software provides a wrapper for such a data-driven performance model
+(called the Non-linear Basis Mixer).
+
+Through MIDI control change messages messages, the user is able to control
 the global dynamics and tempo deviations for classical piano pieces
 with hand movements.
 In the background, the computer model adds subtle modifications to the
 performance such as slight temporal differences in the note onsets
 when playing chords.
-As output, LeapControl creates Midi events which are currently played back
-through a synthesizer (FluidSynth) but these events could also be used
-to control a player-piano as produced by Bösendorfer or Yamaha.
-
-Note: If no LeapMotion sensor is available, tempo and dynamics can be controlled
-through mouse movements.
+As output, it creates MIDI events which can be played back via any software
+based piano synthesizer or even via a player-piano as produced by Bösendorfer
+or Yamaha.
 
 ## Setup
 
-Download and install LeapMotion SDK from the Developer website: xxxx
-
-We recommend Anaconda to fullfil the Python requirements.
+We recommend Anaconda to fullfill the Python requirements.
 All needed packages can be installed through:
 
 ```
     conda env create -f environment.yml
 ```
 
-### Linux Specific
+### Ubuntu Linux Specific
 
-LeapMotion SDK installation guide: https://support.leapmotion.com/hc/en-us/articles/223782608-Linux-Installation
-
-```
-    sudo apt install libasound2-dev libjack-dev libusb-1.0-0-dev libudev-dev fluidsynth
-```
-
-If you want to use the knob to control the AI level, you need to add this
-udev rule: https://github.com/signal11/hidapi/blob/master/udev/99-hid.rules
-
-Please set the `idVendor` to `077d` `idProduct` to `0410` in lines 12 and 20.
-
-### Mac Specific
+The following dependencies must be installed before creating the conda
+environment:
 
 ```
-    conda install -c conda-forge fluidsynth
+    sudo apt install pkg-config libjack-dev
 ```
 
 ## Run
 
 ```
-    source activate leapcontrol
-    python gui.py
+    source activate expressiveness
+    python expressiveness.py
 ```
-
-By pressing `F1`, you can adapt LeapControl's configuration.
 
 ## Playback
 
-LeapControl has two playback modes: Midi rendering and Basis Mixer.
-With Midi rendering, you can load any piano Midi file with LeapControl and
+Expressiveness has two playback modes: MIDI rendering and Basis Mixer.
+With MIDI rendering, you can load any piano MIDI file with Expressiveness and
 control its tempo and dynamics.
 However, the Basis Mixer requires a special file format which basically is a CSV
 containing a list of note events (first three rows) plus a pre-computed
 six-dimensional parameter vector which stores additional performance
 information.
 
-Furthermore, FluidSynth needs a soundfont for playback. This soundfont should
-be located in the folder `sound_font` in the root directory. The soundfont
-itself should be renamed to `default.sf2`.
-
 ## MIDI Interface
+
+The MIDI device name to connect to is `expressiveness-backend`.
 
 ### Inputs
 
 * Control Change, channel=0, control=20: LeapMotion X coordinate, [0, 127]
 * Control Change, channel=0, control=21: LeapMotion Y coordinate, [0, 127]
 * Control Change, channel=0, control=22: ML-Scaler, [0, 127]
-* Control Change, channel=0, control=23: Select Song, [0, 127]
+* Song Select, [0, 127]
 * Control Change, channel=0, control=24: Play, value=127
 * Control Change, channel=0, control=25: Stop, value=127
 
@@ -92,6 +74,12 @@ itself should be renamed to `default.sf2`.
 * Control Change, channel=1, control=114: Vis 5, [0, 127]
 * Control Change, channel=1, control=115: End of a song signal, value=127
 
+## Frontends
+
+This software serves as a backend and should be combined with a frontend for user interaction. Available frontends are
+ - https://github.com/IMAGINARY/expressiveness-ui
+ - https://github.com/stefan-balke/LeapControl
+
 ## Funding
 
 This project has received funding from the European Research Council (ERC) under the European Union's Horizon 2020 research and innovation programme (grant agreement number 670035).
@@ -100,3 +88,7 @@ This project has received funding from the European Research Council (ERC) under
 
 Carlos E. Cancino-Chacón1, Maarten Grachten, Werner Goebl and Gerhard Widmer:
 Computational Models of Expressive Music Performance: A Comprehensive and Critical Review. In Frontiers in Digital Humanities, 5:25. doi: 10.3389/fdigh.2018.00025
+
+## License
+
+This project is licensed under the Apache v2.0 license. See the `LICENSE` file for the license text.

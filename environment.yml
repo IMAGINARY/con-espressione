@@ -1,4 +1,4 @@
-name: leapcontrol
+name: expressiveness
 
 channels:
   - defaults
@@ -8,14 +8,9 @@ channels:
 dependencies:
   - python=3.6
   - numpy
-  - leap-motion-python
-  - kivy
   - scipy
   - cython
 
   - pip:
     - mido
     - python-rtmidi
-    - ffpyplayer
-    - hidapi
-    - pyfluidsynth
