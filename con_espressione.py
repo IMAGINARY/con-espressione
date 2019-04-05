@@ -43,9 +43,9 @@ class LeapControl():
 
         # init playback thread
         self.playback_thread = BMThread(self.cur_song, midi_out=self.midi_outport)
-        self.playback_thread.set_tempo(self.message_buffer['tempo'])
-        self.playback_thread.set_scaler(self.message_buffer['scaler'])
-        self.playback_thread.set_velocity(self.message_buffer['vel'])
+        self.set_tempo(self.message_buffer['tempo'])
+        self.set_ml_scaler(self.message_buffer['scaler'])
+        self.set_velocity(self.message_buffer['vel'])
         self.playback_thread.start_playing()
         self.playback_thread.start()
 
