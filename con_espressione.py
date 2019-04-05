@@ -41,7 +41,7 @@ class LeapControl():
         if self.playback_thread is not None:
             init_tempo = self.playback_thread.tempo
             init_scaler = self.playback_thread.scaler
-            init_velocity = self.playback_thread.vel_factor
+            init_velocity = self.playback_thread.vel
             self.stop()
 
         # init playback thread
