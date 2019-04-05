@@ -18,6 +18,10 @@ class LeapControl():
         self.cur_song_id = 0
         self.cur_song = self.song_list[self.cur_song_id]
 
+        # This buffer is introduced to keep the last midi messages from the GUI
+        # When switching tracks, we want to keep the latest state of the GUI.
+        self.message_buffer = dict('tempo': 1.0, 'scaler': 0.5, 'vel': 50)
+
         # init playback thread
         self.playback_thread = None
 
@@ -33,22 +37,15 @@ class LeapControl():
             self.cur_song = self.song_list[self.cur_song_id]
 
     def play(self):
-        init_tempo = 1.0
-        init_scaler = 0.0
-        init_velocity = 50.0
-
         # terminate playback thread if running
         if self.playback_thread is not None:
-            init_tempo = self.playback_thread.tempo
-            init_scaler = self.playback_thread.scaler
-            init_velocity = self.playback_thread.vel
             self.stop()
 
         # init playback thread
         self.playback_thread = BMThread(self.cur_song, midi_out=self.midi_outport)
-        self.playback_thread.set_tempo(init_tempo)
-        self.playback_thread.set_scaler(init_scaler)
-        self.playback_thread.set_velocity(init_velocity)
+        self.playback_thread.set_tempo(self.message_buffer['tempo'])
+        self.playback_thread.set_scaler(self.message_buffer['scaler'])
+        self.playback_thread.set_velocity(self.message_buffer['vel'])
         self.playback_thread.start_playing()
         self.playback_thread.start()
 
@@ -58,6 +55,9 @@ class LeapControl():
             self.playback_thread.join()
 
     def set_velocity(self, val):
+        # store latest message
+        self.message_buffer['vel'] = val
+
         # scale value in [0, 127] to [0.5, 2]
         if val <= 64:
             out = (0.5 / 64.0) * val + 0.5
@@ -68,6 +68,9 @@ class LeapControl():
             self.playback_thread.set_velocity(out)
 
     def set_tempo(self, val):
+        # store latest message
+        self.message_buffer['tempo'] = val
+
         # scale value in [0, 127] to [0.5, 2]
         if val <= 64:
             out = - (2.0 / 128.0) * val + 2.0
@@ -78,6 +81,9 @@ class LeapControl():
             self.playback_thread.set_tempo(out)
 
     def set_ml_scaler(self, val):
+        # store latest message
+        self.message_buffer['scaler'] = val
+
         # scale value in [0, 127] to [0, 100]
         out = (100 / 127) * val
 
