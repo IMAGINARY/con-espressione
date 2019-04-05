@@ -20,7 +20,7 @@ class LeapControl():
 
         # This buffer is introduced to keep the last midi messages from the GUI
         # When switching tracks, we want to keep the latest state of the GUI.
-        self.message_buffer = dict('tempo': 1.0, 'scaler': 0.5, 'vel': 50)
+        self.message_buffer = {'tempo': 1.0, 'scaler': 0.5, 'vel': 50}
 
         # init playback thread
         self.playback_thread = None
