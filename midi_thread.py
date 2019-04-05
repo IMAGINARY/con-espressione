@@ -191,14 +191,19 @@ class BMThread(threading.Thread):
                     vt, vd, lbpr, tim, lart, self.vis_scaling_factors)
 
                 # Send vis information via MIDI message
+                vts = min(max(0, vts), 1)
                 msg = mido.Message('control_change', channel=1, control=110, value=int(vts * 127))
                 self.midi_outport.send(msg)
+                vds = min(max(0, vds), 1)
                 msg = mido.Message('control_change', channel=1, control=111, value=int(vds * 127))
                 self.midi_outport.send(msg)
+                lbprs = min(max(0, lbprs), 1)
                 msg = mido.Message('control_change', channel=1, control=112, value=int(lbprs * 127))
                 self.midi_outport.send(msg)
+                tims = min(max(0, tims), 1)
                 msg = mido.Message('control_change', channel=1, control=113, value=int(tims * 127))
                 self.midi_outport.send(msg)
+                larts = min(max(0, larts), 1)
                 msg = mido.Message('control_change', channel=1, control=114, value=int(larts * 127))
                 self.midi_outport.send(msg)
 

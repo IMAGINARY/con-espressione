@@ -57,7 +57,7 @@ information.
 
 ## MIDI Interface
 
-The MIDI device name to connect to is `con-espressione-backend`.
+The MIDI device name to connect to is `con-espressione`.
 
 ### Inputs
 
