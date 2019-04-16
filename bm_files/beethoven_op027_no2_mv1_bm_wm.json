@@ -22,5 +22,7 @@
     "velocity_ave": 45,
     "vel_min": 30,
     "vel_max": 100,
-    "pedal_threshold": 50
+    "pedal_threshold": 50,
+    "mel_lead_exag_coeff": 1.0,
+    "max_scaler": 2.0
 }

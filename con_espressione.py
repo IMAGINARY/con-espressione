@@ -7,6 +7,7 @@ import logging
 import mido
 from midi_thread import BMThread
 import platform
+import json
 
 
 class LeapControl():
@@ -17,6 +18,7 @@ class LeapControl():
         self.song_list = song_list
         self.cur_song_id = 0
         self.cur_song = self.song_list[self.cur_song_id]
+        self.cur_config = None
 
         # This buffer is introduced to keep the last midi messages from the GUI
         # When switching tracks, we want to keep the latest state of the GUI.
@@ -24,6 +26,14 @@ class LeapControl():
 
         # init playback thread
         self.playback_thread = None
+
+    def load_config(self):
+        path_config = self.cur_song.replace('.txt', '.json')
+
+        with open(path_config) as json_file:
+            config = json.load(json_file)
+
+        self.cur_config = config
 
     def select_song(self, val):
         # terminate playback thread if running
@@ -42,7 +52,15 @@ class LeapControl():
             self.stop()
 
         # init playback thread
-        self.playback_thread = BMThread(self.cur_song, midi_out=self.midi_outport)
+        self.load_config()
+        self.playback_thread = BMThread(self.cur_song, midi_out=self.midi_outport,
+                                        vel_min=self.cur_config['vel_min'],
+                                        vel_max=self.cur_config['vel_max'],
+                                        tempo_ave=self.cur_config['tempo_ave'],
+                                        velocity_ave=self.cur_config['velocity_ave'],
+                                        max_scaler=self.cur_config['max_scaler'],
+                                        pedal_threshold=self.cur_config['pedal_threshold'],
+                                        mel_lead_exag_coeff=self.cur_config['pedal_threshold'])
         self.set_tempo(self.message_buffer['tempo'])
         self.set_ml_scaler(self.message_buffer['scaler'])
         self.set_velocity(self.message_buffer['vel'])

@@ -1,25 +1,28 @@
 {
     "timing": {
-        "std": 0.001, 
+        "std": 0.001,
         "mean": 0.0
-    }, 
+    },
     "log_bpr": {
-        "std": 0.1, 
+        "std": 0.1,
         "mean": -0.01
-    }, 
+    },
     "vel_trend": {
         "exag_exp": 1.0
-    }, 
+    },
     "log_art": {
-        "std": 0.30, 
+        "std": 0.30,
         "mean": 0.7
-    }, 
+    },
     "vel_dev": {
-        "std": 9, 
+        "std": 9,
         "mean": 7
     },
     "vel_max": 105,
     "tempo_ave": 1.1,
     "velocity_ave": 55,
-    "vel_min": 30
+    "vel_min": 30,
+    "pedal_threshold": 60,
+    "mel_lead_exag_coeff": 1.0,
+    "max_scaler": 2.0
 }
