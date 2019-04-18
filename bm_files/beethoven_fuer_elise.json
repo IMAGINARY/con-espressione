@@ -22,8 +22,8 @@
     "vel_max": 90.0,
     "vel_min": 9.0,
     "velocity_ave": 35.82653045654297,
-    "tempo_rel_min": 0.5,
-    "tempo_rel_max": 2.0,
+    "tempo_rel_min": 2.0,
+    "tempo_rel_max": 0.5,
     "pedal_threshold": 60,
     "mel_lead_exag_coeff": 1.0,
     "max_scaler": 2.0
