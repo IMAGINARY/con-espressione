@@ -18,9 +18,9 @@
         "std": 9.860440491312895,
         "mean": 5.4729020979020975
     },
-    "vel_min": 15,
+    "vel_min": 9,
     "vel_max": 120,
-    "velocity_ave": 55.72786331176758,
+    "velocity_ave": 45.72786331176758,
     "tempo_ave": 2.4,
     "pedal_threshold": 50,
     "mel_lead_exag_coeff": 1.0,
