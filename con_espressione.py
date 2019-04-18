@@ -78,9 +78,9 @@ class LeapControl():
 
         # scale value in [0, 127] to [0.5, 2]
         if val <= 64:
-            out = (0.5 / 64.0) * val + 0.5
+            out = ((1 - self.cur_config['tempo_rel_min']) / 64.0) * val + self.cur_config['tempo_rel_min']
         if val > 64:
-            out = (2.0 / 127.0) * val
+            out = ((self.cur_config['tempo_rel_max'] - 1) / 64.0) * (val - 64) + 1
 
         if self.playback_thread is not None:
             self.playback_thread.set_velocity(out)
@@ -91,7 +91,7 @@ class LeapControl():
 
         # scale value in [0, 127] to [0.5, 2]
         if val <= 64:
-            out = - (2.0 / 128.0) * val + 2.0
+            out = (1 - ) * val +
         if val > 64:
             out = - (1.0 / 127.0) * val + 1.5
 

@@ -15,8 +15,7 @@ import os
 from basismixer.performance_codec import (load_bm_preds,
                                           PerformanceCodec)
 from basismixer.bm_utils import (get_vis_scaling_factors,
-                                 compute_vis_scaling, sigmoid,
-                                 SIGMOID_1)
+                                 compute_vis_scaling, sigmoid)
 from basismixer.expression_tools import scale_parameters
 
 
@@ -138,7 +137,7 @@ class BMThread(threading.Thread):
             t_scale = tempo
         if tempo > 1:
             # TODO: Test other scalings
-            t_scale = sigmoid(tempo) / SIGMOID_1
+            t_scale = sigmoid(tempo) / sigmoid(1.0)
         self.tempo = t_scale * self.tempo_ave
 
     def set_scaler(self, scaler):
