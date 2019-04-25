@@ -18,11 +18,13 @@
         "mean": 0.6138881267619163,
         "std": 0.7883361433165818
     },
-    "tempo_ave": 1.9665204160639504,
-    "vel_max": 80.0,
-    "vel_min": 30.0,
-    "velocity_ave": 48.070796966552734,
-    "pedal_threshold": 60,
+    "tempo_ave": 1.7665204160639504,
+    "tempo_rel_min": 5.0,
+    "tempo_rel_max": 0.1,
+    "vel_max": 110.0,
+    "vel_min": 15.0,
+    "velocity_ave": 50.00,
+    "pedal_threshold": 75,
     "mel_lead_exag_coeff": 1.0,
     "max_scaler": 2.0
 }
