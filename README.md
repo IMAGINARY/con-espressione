@@ -86,6 +86,9 @@ which is embedded in this repository as a submodule in the folder `web-ui`.
 
 This project has received funding from the European Research Council (ERC) under the European Union's Horizon 2020 research and innovation programme (grant agreement number 670035).
 
+<img src="https://erc.europa.eu/sites/default/files/LOGO_ERC-FLAG_EU_.jpg" width="35%" height="35%">
+
+
 ## References
 
 > Carlos E. Cancino-Chacón, Maarten Grachten, Werner Goebl and Gerhard Widmer:<br />
