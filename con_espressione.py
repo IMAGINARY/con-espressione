@@ -144,9 +144,9 @@ def main():
               'bm_config': 'bm_files/beethoven_op027_no2_mv1_bm_z.json'}
 
     SONG_LIST = ['bm_files/beethoven_op027_no2_mv1_bm_z.txt',
-                 'bm_files/chopin_op10_No3_bm_magaloff.txt',
-                 'bm_files/mozart_k331_3_batik.txt',
-                 'bm_files/beethoven_fuer_elise.txt']
+                 'bm_files/chopin_op10_No3_v422.txt',
+                 'bm_files/mozart_kv545_mv2.txt',
+                 'bm_files/beethoven_fuer_elise_complete.txt']
 
     # instantiate LeapControl
     lc = LeapControl(CONFIG, SONG_LIST)
