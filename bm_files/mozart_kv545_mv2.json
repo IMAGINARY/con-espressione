@@ -20,7 +20,7 @@
     },
     "tempo_ave": 1.0,
     "tempo_rel_min": 5.0,
-    "tempo_rel_max": 0.1,
+    "tempo_rel_max": 0.4,
     "vel_max": 110.0,
     "vel_min": 15.0,
     "velocity_ave": 50.00,
