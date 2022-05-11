@@ -1,3 +1,52 @@
+// Utility function to load a SoundFont file from a URL using XMLHttpRequest.
+// The same origin policy will apply, as for all XHR requests.
+function loadSoundFont(url, success, error) {
+    var xhr = new XMLHttpRequest();
+    xhr.open("GET", url, true);
+    xhr.responseType = "arraybuffer";
+    xhr.onreadystatechange = function () {
+        if (xhr.readyState === 4) {
+            if (xhr.status === 200) {
+                success(new Uint8Array(xhr.response));
+            } else {
+                if (options.error) {
+                    options.error(xhr.statusText);
+                }
+            }
+        }
+    };
+    xhr.send();
+}
+
+// Load and parse a SoundFont file.
+loadSoundFont("Yamaha-Grand-Lite-v2.0.sf3", async function (sf2Data) {
+    await JSSynth.waitForReady();
+
+    // Prepare the AudioContext instance
+    var context = new AudioContext();
+    setInterval(()=>context.resume(), 1000);
+
+    await context.audioWorklet.addModule('./libfluidsynth-2.2.1-sf3.js')
+    await context.audioWorklet.addModule('https://unpkg.com/js-synthesizer@1.8.4/dist/js-synthesizer.worklet.js');
+
+    // Create the synthesizer instance for AudioWorkletNode
+    window.synth = new JSSynth.AudioWorkletNodeSynthesizer();
+    synth.init(context.sampleRate);
+    // You must create AudioWorkletNode before using other methods
+    // (This is because the message port is not available until the
+    // AudioWorkletNode is created)
+    const audioNode = synth.createAudioNode(context);
+    audioNode.connect(context.destination); // or another node...
+    // After node creation, you can use Synthesizer methods
+    await synth.loadSFont(sf2Data);
+
+    // Load your SoundFont data (sfontBuffer: ArrayBuffer)
+    window.sfId = await synth.loadSFont(sf2Data);
+    window.synth = synth;
+
+    console.log("Sound font loaded");
+});
+
 class Message {
     constructor(type,{
         channel= 	0,
@@ -70,22 +119,36 @@ const mido = {
 };
 
 class MidiPlayer {
-    constructor(midi_output) {
-        this.output = midi_output;
+    constructor() {
     }
 
     send(message, timestamp) {
+        const dict = message.dict();
         const bytes = [...message.bytes()].map(b => Number(b));
-        console.log(bytes, timestamp);
-        this.output.send(bytes, timestamp);
+        try {
+            switch(dict.get('type')) {
+                case "note_on":
+                    console.log("note_on", message.note, message.velocity);
+                    synth.midiNoteOn(Number(message.channel), Number(message.note), Number(message.velocity));
+                    break;
+                case "note_off":
+                    console.log("note_off", message.note);
+                    synth.midiNoteOn(Number(message.channel), Number(message.note));
+                    break;
+                case "control_change":
+                    if(message.channel === 0) {
+                        console.log("control_change", message.channel, message.control, message.value);
+                        synth.midiControl(Number(message.channel), Number(message.control), Number(message.value));
+                    }
+                    break;
+            }
+        } catch(e) {
+            console.log(e);
+        }
     }
 
     static async create() {
-        const midiAccess = await navigator.requestMIDIAccess();
-        console.log(midiAccess.outputs);
-        const output = [...midiAccess.outputs].filter(([,{name}]) => name === "IAC-Treiber IAC-Bus 2")[0]?.[1];
-        await output.open();
-        return new MidiPlayer(output);
+        return new MidiPlayer();
    }
 }
 
@@ -103,14 +166,6 @@ async function main(){
     await p;
 
     const sleep = async (t) => new Promise((resolve) => {setTimeout(resolve, t);});
-
-    await sleep(500);
-    console.log("HACK!");
-    await sleep(500);
-    console.log("  HACK!");
-    await sleep(500);
-    console.log("    HACK!");
-    console.log();
 
     let pyodide = await loadPyodide();
 
