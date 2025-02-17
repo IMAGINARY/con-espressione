@@ -353,7 +353,7 @@ def load_bm_preds(filename, deadpan=False, post_process_config={},
     elif isinstance(filename, np.ndarray):
         bm_data = filename.copy()
     # Score information
-    pitches = bm_data[:, 0].astype(np.int)
+    pitches = bm_data[:, 0].astype(int)
     onsets = bm_data[:, 1]
     durations = bm_data[:, 2]
     melody = bm_data[:, 8]
@@ -397,7 +397,7 @@ def load_bm_preds(filename, deadpan=False, post_process_config={},
             _vel_trend /= _vel_trend.mean()
             vel_trend_trend = None
 
-        vel_trend = np.ones(len(bm_data), dtype=np.float)
+        vel_trend = np.ones(len(bm_data), dtype=float)
         for vt, ix in zip(_vel_trend, unique_onset_idxs):
             vel_trend[ix] = vt
 
@@ -431,7 +431,7 @@ def load_bm_preds(filename, deadpan=False, post_process_config={},
         else:
             _log_bpr = remove_trend(_log_bpr, unique_onsets)
 
-        log_bpr = np.zeros(len(bm_data), dtype=np.float)
+        log_bpr = np.zeros(len(bm_data), dtype=float)
         for lb, ix in zip(_log_bpr, unique_onset_idxs):
             log_bpr[ix] = lb
 
@@ -560,7 +560,7 @@ def _build_score_dict(pitches, onsets, durations, melody,
                     else:
                         udurmx.append(ud[durations[ud].argmax()])
 
-                udurmx = np.array(udurmx).astype(np.int)
+                udurmx = np.array(udurmx).astype(int)
 
                 pit = pitches[udurmx]
                 dur = durations[udurmx]

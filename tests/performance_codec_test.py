@@ -84,7 +84,7 @@ def test_dummy_performance_generation():
             perf_duration = ((2 ** lart) * bpr_a * dur)[perf_onset_idx]
 
             perf_vel = np.clip(np.round((vt * vel_a - vd * 64)), vel_min,
-                               vel_max).astype(np.int)[perf_onset_idx]
+                               vel_max).astype(int)[perf_onset_idx]
             pitch = pitch[perf_onset_idx]
 
             on_messages = []
