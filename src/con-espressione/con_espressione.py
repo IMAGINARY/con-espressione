@@ -5,7 +5,7 @@ import argparse
 import os
 import logging
 import mido
-from midi_thread import BMThread
+from .midi_thread import BMThread
 import platform
 import json
 
@@ -169,7 +169,7 @@ def main():
         lc.midi_inport.close()
 
 
-if __name__ == '__main__':
+def main_cli():
     parser = argparse.ArgumentParser(description='Backend for BM-Application.')
     parser.add_argument('--verbose', help='Print Debug logs.', action='store_true')
     args = parser.parse_args()
