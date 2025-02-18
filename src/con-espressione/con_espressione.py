@@ -2,23 +2,55 @@
     Run the Demo
 """
 import argparse
-import os
 import logging
 import mido
-from .midi_thread import BMThread
-import platform
 import json
+import numpy as np
+from importlib.resources import files as resource_files
+
+from .bm_thread import BMThread
+from . import bm_files
+
+SONG_LIST = [
+    'beethoven_op027_no2_mv1_bm_z',
+    'chopin_op10_No3_v422',
+    'mozart_kv545_mv2',
+    'beethoven_fuer_elise_complete',
+]
+
+def read_json(posix_path):
+    with open(posix_path) as f:
+        return json.load(f)
+
+def read_np_array(posix_path):
+    with open(posix_path) as f:
+        return np.loadtxt(f)
+
+def load_internal_song(id):
+    # Import song data from internal files relative to this module
+
+    traversable_resource_files = resource_files(bm_files)
+
+    config_path = traversable_resource_files / f'{id}.json'
+    config = read_json(config_path)
+
+    bm_data_path = traversable_resource_files / f'{id}.txt'
+    bm_data = read_np_array(bm_data_path)
+
+    pedal_path = traversable_resource_files / f'{id}.pedal'
+    pedal = np.loadtxt(pedal_path)
+
+    return { "config": config, "bm_data": bm_data, "pedal": pedal }
 
 
 class LeapControl():
-    def __init__(self, config, song_list):
+    def __init__(self, songs):
         self.midi_outport = mido.open_output('con-espressione', virtual=True)
         self.midi_inport = mido.open_input('con-espressione', virtual=True)
 
-        self.song_list = song_list
+        self.songs = songs
         self.cur_song_id = 0
-        self.cur_song = self.song_list[self.cur_song_id]
-        self.cur_config = None
+        self.cur_song = self.songs[self.cur_song_id]
 
         # This buffer is introduced to keep the last midi messages from the GUI
         # When switching tracks, we want to keep the latest state of the GUI.
@@ -27,24 +59,16 @@ class LeapControl():
         # init playback thread
         self.playback_thread = None
 
-    def load_config(self):
-        path_config = self.cur_song.replace('.txt', '.json')
-
-        with open(path_config) as json_file:
-            config = json.load(json_file)
-
-        self.cur_config = config
-
     def select_song(self, val):
         # terminate playback thread if running
         if self.playback_thread is not None:
             self.stop()
 
-        val = int(val)
+        song_id = int(val)
 
-        if val < len(self.song_list):
-            self.cur_song_id = int(val)
-            self.cur_song = self.song_list[self.cur_song_id]
+        if val < len(self.songs):
+            self.cur_song_id = song_id
+            self.cur_song = self.songs[song_id]
 
     def play(self):
         # terminate playback thread if running
@@ -52,15 +76,20 @@ class LeapControl():
             self.stop()
 
         # init playback thread
-        self.load_config()
-        self.playback_thread = BMThread(self.cur_song, midi_out=self.midi_outport,
-                                        vel_min=self.cur_config['vel_min'],
-                                        vel_max=self.cur_config['vel_max'],
-                                        tempo_ave=self.cur_config['tempo_ave'],
-                                        velocity_ave=self.cur_config['velocity_ave'],
-                                        max_scaler=self.cur_config['max_scaler'],
-                                        pedal_threshold=self.cur_config['pedal_threshold'],
-                                        mel_lead_exag_coeff=self.cur_config['pedal_threshold'])
+        cur_config = self.cur_song['config']
+        bm_data = self.cur_song['bm_data']
+        pedal = self.cur_song['pedal']
+        self.playback_thread = BMThread(cur_config,
+                                        bm_data,
+                                        midi_out=self.midi_outport,
+                                        pedal = pedal,
+                                        vel_min=cur_config['vel_min'],
+                                        vel_max=cur_config['vel_max'],
+                                        tempo_ave=cur_config['tempo_ave'],
+                                        velocity_ave=cur_config['velocity_ave'],
+                                        max_scaler=cur_config['max_scaler'],
+                                        pedal_threshold=cur_config['pedal_threshold'],
+                                        mel_lead_exag_coeff=cur_config['pedal_threshold'])
         self.set_tempo(self.message_buffer['tempo'])
         self.set_ml_scaler(self.message_buffer['scaler'])
         self.set_velocity(self.message_buffer['vel'])
@@ -90,10 +119,11 @@ class LeapControl():
         self.message_buffer['tempo'] = val
 
         # scale value in [0, 127] to [0.5, 2]
+        cur_config = self.cur_song['config']
         if val <= 64:
-            out = ((1 - self.cur_config['tempo_rel_min']) / 64.0) * val + self.cur_config['tempo_rel_min']
+            out = ((1 - cur_config['tempo_rel_min']) / 64.0) * val + cur_config['tempo_rel_min']
         if val > 64:
-            out = ((self.cur_config['tempo_rel_max'] - 1) / 64.0) * (val - 64) + 1
+            out = ((cur_config['tempo_rel_max'] - 1) / 64.0) * (val - 64) + 1
 
         if self.playback_thread is not None:
             self.playback_thread.set_tempo(out)
@@ -137,19 +167,10 @@ class LeapControl():
 
 
 def main():
-    CONFIG = {'playmode': 'BM',
-              'driver': 'alsa' if platform.system() == 'Linux' else 'coreaudio',
-              'control': 'Mouse',
-              'bm_file': 'bm_files/beethoven_op027_no2_mv1_bm_z.txt',
-              'bm_config': 'bm_files/beethoven_op027_no2_mv1_bm_z.json'}
-
-    SONG_LIST = ['bm_files/beethoven_op027_no2_mv1_bm_z.txt',
-                 'bm_files/chopin_op10_No3_v422.txt',
-                 'bm_files/mozart_kv545_mv2.txt',
-                 'bm_files/beethoven_fuer_elise_complete.txt']
+    songs = list(map(load_internal_song, SONG_LIST))
 
     # instantiate LeapControl
-    lc = LeapControl(CONFIG, SONG_LIST)
+    lc = LeapControl(songs)
 
     try:
         # listen to input MIDI port for messages

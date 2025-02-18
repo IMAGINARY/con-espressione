@@ -5,12 +5,10 @@
 import numpy as np
 from mido import Message
 
-from basismixer.bm_utils import (remove_trend,
-                                 standardize,
-                                 minmax_normalize,
-                                 get_unique_onsets)
-
-# from basismixer.expression_tools import melody_lead, melody_lead_dyn
+from .bm_utils import (remove_trend,
+                       standardize,
+                       minmax_normalize,
+                       get_unique_onsets)
 
 
 class PerformanceCodec(object):
@@ -328,14 +326,14 @@ class PerformanceCodec(object):
         self._bp = self.tempo_ave
 
 
-def load_bm_preds(filename, deadpan=False, post_process_config={},
-                  pedal_fn=None, return_trends=False):
-    """Loads precomputed predictions of the Basis Mixer.
+def import_bm_preds(bm_data, deadpan=False, post_process_config={},
+                  pedal=None, return_trends=False):
+    """Loads precomputed predictions of the Basis Mixer from a an NumPy array.
 
     Parameters
     ----------
-    filename : str
-        File with the precomputed predictions of the Basis Mixer
+    filename : np.ndarray
+        Numpy array with the precomputed predictions of the Basis Mixer
 
     Returns
     -------
@@ -347,11 +345,11 @@ def load_bm_preds(filename, deadpan=False, post_process_config={},
          4:vel_dev, 5:log_bpr, 6:timing, 7:log_art,
          8:melody)
     """
-    # Load predictions file
-    if isinstance(filename, str):
-        bm_data = np.loadtxt(filename)
-    elif isinstance(filename, np.ndarray):
-        bm_data = filename.copy()
+
+    # Not sure if the cloning is necessary, but the original code had it, so I kept it
+    bm_data = bm_data.copy()
+    pedal = pedal.copy() if pedal is not None else None
+
     # Score information
     pitches = bm_data[:, 0].astype(int)
     onsets = bm_data[:, 1]
@@ -362,14 +360,6 @@ def load_bm_preds(filename, deadpan=False, post_process_config={},
     onsets -= onsets.min()
 
     unique_onsets, unique_onset_idxs = get_unique_onsets(onsets)
-
-    if pedal_fn is not None:
-        if isinstance(pedal_fn, str):
-            pedal = np.loadtxt(pedal_fn)
-        elif isinstance(pedal_fn, np.ndarray):
-            pedal = pedal_fn.copy()
-    else:
-        pedal = None
 
     if not deadpan:
         # Performance information (expressive parameters)
@@ -468,6 +458,34 @@ def load_bm_preds(filename, deadpan=False, post_process_config={},
 
     else:
         return score_dict
+
+
+def load_bm_preds(filename, deadpan=False, post_process_config={},
+                  pedal_fn=None, return_trends=False):
+    """Loads precomputed predictions of the Basis Mixer from a file.
+
+    Parameters
+    ----------
+    filename : str
+        File with the precomputed predictions of the Basis Mixer
+
+    Returns
+    -------
+    score_dict : dict
+        Dictionary containing score and performance information.
+        The keys of the dictionary are the unique score positions.
+        For each score position, there is a tuple containing:
+        (0:Pitches, 1:score ioi, 2:durations, 3:vel_trend
+         4:vel_dev, 5:log_bpr, 6:timing, 7:log_art,
+         8:melody)
+    """
+    # Load predictions file
+    bm_data = np.loadtxt(filename)
+
+    # Load pedal file, if specified
+    pedal = np.loadtxt(pedal_fn) if pedal_fn is not None else None
+
+    return import_bm_preds(bm_data, deadpan=deadpan, post_process_config=post_process_config, pedal=pedal, return_trends=return_trends)
 
 
 def _build_score_dict(pitches, onsets, durations, melody,

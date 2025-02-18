@@ -8,58 +8,19 @@ import threading
 import time
 import mido
 import numpy as np
-import json
-import mido
-import os
 
-from basismixer.performance_codec import (load_bm_preds,
+from basismixer.performance_codec import (import_bm_preds,
                                           PerformanceCodec)
 from basismixer.bm_utils import (get_vis_scaling_factors,
                                  compute_vis_scaling, sigmoid)
 from basismixer.expression_tools import scale_parameters
 
 
-class MidiThread(threading.Thread):
-
-    def __init__(self, midi_path, driver='alsa'):
-        threading.Thread.__init__(self)
-        self.path_midi = midi_path
-        self.midi = None
-        self.load_midi(self.path_midi)
-        self.vel_factor = 1
-        self.tempo = 1
-        self.play = True
-
-    def load_midi(self, path_midi):
-        self.midi = mido.MidiFile(path_midi)
-
-    def start_playing(self):
-        self.play = True
-
-    def stop_playing(self):
-        self.play = False
-
-    def set_velocity(self, vel_factor):
-        self.vel_factor = vel_factor
-
-    def set_tempo(self, tempo):
-        self.tempo = tempo
-
-    def run(self):
-        for msg in self.midi:
-            play_msg = msg
-            time.sleep(play_msg.time * self.tempo)
-            if msg.type == 'note_on':
-                if msg.velocity != 0:
-                    new_vel = int(min(msg.velocity * self.vel_factor, 127))
-                    play_msg = msg.copy(velocity=new_vel)
-
-        return 0
-
-
 class BMThread(threading.Thread):
 
-    def __init__(self, bm_precomputed_path, midi_out,
+    def __init__(self, config, bm_data,
+                 midi_out,
+                 pedal=None,
                  vel_min=30, vel_max=110,
                  tempo_ave=55,
                  velocity_ave=50,
@@ -74,16 +35,14 @@ class BMThread(threading.Thread):
         self.tempo = 1
         self.reached_end = False
 
-        self.post_process_config = json.load(open(bm_precomputed_path.replace('.txt', '.json')))
-        pedal_fn = (bm_precomputed_path.replace('.txt', '.pedal')
-                    if os.path.exists(bm_precomputed_path.replace('.txt', '.pedal'))
-                    else None)
+        # Rename because original code below used a different name
+        self.post_process_config = config
 
         # Construct score-performance dictionary
-        self.score_dict = load_bm_preds(bm_precomputed_path,
+        self.score_dict = import_bm_preds(bm_data,
                                         deadpan=deadpan,
                                         post_process_config=self.post_process_config,
-                                        pedal_fn=pedal_fn)
+                                        pedal=pedal)
 
         self.tempo_ave = self.post_process_config.get('tempo_ave', tempo_ave)
         self.velocity_ave = self.post_process_config.get('velocity_ave', velocity_ave)
