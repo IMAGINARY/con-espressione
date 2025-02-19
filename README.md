@@ -41,6 +41,14 @@ when in [development mode](Development).
 
 By default, the app does not generate any console output during normal operation, but additional logging can be enabled by adding (multiple) `-v` flags to the command line.
 
+### Platform specific notes
+
+#### Linux
+
+The app depends on recent versions of standard libraries. Only Ubuntu 24.04 has been tested.
+
+Additionally, it might be necessary to install `libjack0`.
+
 ### MIDI Interface
 
 The app is controlled via MIDI messages to its `con-espressione` MIDI input port and sends MIDI music and status messages to its `con-espressione` MIDI output port. See [MIDI Interface](#midi-interface) for details.
