@@ -23,6 +23,10 @@ Download the precompiled binary for your platform from the release section, rena
 
 If binaries are not available for your platform, see the [build instructions](Development) below.
 
+Notes for macOS users:
+- The app binaries are unsigned. Therefore, you may need to allow them to run in the system settings.
+- When running the app for the first time, loading may take a long time due to security checks that macOS is doing in the background.
+
 ## Usage 
 
 Run the binary with the following command:
