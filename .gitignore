@@ -211,3 +211,10 @@ $RECYCLE.BIN/
 
 *#
 .#*
+
+# Pipenv project-local virtualenv
+.venv
+
+# pex build results
+dist/
+

@@ -1,0 +1,19 @@
+[project]
+name = "con-espressione"
+version = "0.0.0"
+authors = [
+ { name="Stefan Balke" },
+ { name="Carlos E. Cancino-Chacón" },
+ { name="Florian Henkel" },
+ { name="Gerhard Widmer" },
+ { name="Christian Stussak", email="christian.stussak@imaginary.org" },
+]
+description = "Expressiveness Basis Mixer"
+readme = "README.md"
+
+[build-system]
+# This is required for pex to include even non-Pyhon files from git sourch as the bm_files
+# Note that building the redistributable packages might not work when the source is not a git repository,
+# e.g. if is a tarball or a zip file.
+requires = ["setuptools", "setuptools-scm"]
+build-backend = "setuptools.build_meta"

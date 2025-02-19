@@ -1,13 +1,13 @@
-# Con Espressione
+# Con Espressione!
 
 Mimicking real performances from sheet music with the computer constitutes a
 challenging research problem. There exist a few systems which are either
-rule-based---following common performance rules in classical music---or
+rule-based – following common performance rules in classical music – or
 driven by learned performance models.
 This software provides a wrapper for such a data-driven performance model
 (called the Non-linear Basis Mixer).
 
-Through MIDI control change messages messages, the user is able to control
+Through MIDI control change messages, the user is able to control
 the global dynamics and tempo deviations for classical piano pieces
 with hand movements.
 In the background, the computer model adds subtle modifications to the
@@ -17,49 +17,35 @@ As output, it creates MIDI events which can be played back via any software
 based piano synthesizer or even via a player-piano as produced by Bösendorfer
 or Yamaha.
 
-## Setup
+## Installation
 
-We recommend Anaconda to fullfill the Python requirements.
-All needed packages can be installed through:
+Download the precompiled binary for your platform from the release section, rename it to `con-espressione` and make it executable (`chmod +x con-espressione` on the command line).
 
+If binaries are not available for your platform, see the [build instructions](Development) below.
+
+Notes for macOS users:
+- The app binaries are unsigned. Therefore, you may need to allow them to run in the system settings.
+- When running the app for the first time, loading may take a long time due to security checks that macOS is doing in the background.
+
+## Usage 
+
+Run the binary with the following command:
 ```
-    git clone ###REPO-URL###
-    git submodule init
-    git submodule update
-    conda env create -f environment.yml
+./con-espressione
 ```
-
-### Ubuntu Linux Specific
-
-The following dependencies must be installed before creating the conda
-environment:
-
+or use
 ```
-    sudo apt install pkg-config libjack-dev
+pipenv run start
 ```
+when in [development mode](Development).
 
-## Run
+By default, the app does not generate any console output during normal operation, but additional logging can be enabled by adding (multiple) `-v` flags to the command line.
 
-```
-    source activate con_espressione
-    python con_espressione.py
-```
+### MIDI Interface
 
-## Playback
+The app is controlled via MIDI messages to its `con-espressione` MIDI input port and sends MIDI music and status messages to its `con-espressione` MIDI output port. See [MIDI Interface](#midi-interface) for details.
 
-Expressiveness has two playback modes: MIDI rendering and Basis Mixer.
-With MIDI rendering, you can load any piano MIDI file with Expressiveness and
-control its tempo and dynamics.
-However, the Basis Mixer requires a special file format which basically is a CSV
-containing a list of note events (first three rows) plus a pre-computed
-six-dimensional parameter vector which stores additional performance
-information.
-
-## MIDI Interface
-
-The MIDI device name to connect to is `con-espressione`.
-
-### Inputs
+#### Inputs
 
 * Control Change, channel=0, control=20: LeapMotion X coordinate, [0, 127]
 * Control Change, channel=0, control=21: LeapMotion Y coordinate, [0, 127]
@@ -68,7 +54,11 @@ The MIDI device name to connect to is `con-espressione`.
 * Control Change, channel=0, control=24: Play, value=127
 * Control Change, channel=0, control=25: Stop, value=127
 
-### Outputs
+#### Music outputs
+
+The generated notes are sent on output channel 0. This channel should be connected to a software synthesizer or a player piano.
+
+#### Status outputs
 
 * Control Change, channel=1, control=110: Vis 1, [0, 127]
 * Control Change, channel=1, control=111: Vis 2, [0, 127]
@@ -77,10 +67,42 @@ The MIDI device name to connect to is `con-espressione`.
 * Control Change, channel=1, control=114: Vis 5, [0, 127]
 * Control Change, channel=1, control=115: End of a song signal, value=127
 
+### Basis Mixer files
+
+The Basis Mixer requires a special file format which basically is a CSV
+containing a list of note events (first three rows) plus a pre-computed
+six-dimensional parameter vector which stores additional performance
+information. See `src/con-espressione/basis_mixer` for the included compositions.
+
+## Development
+
+We use [Pipenv](https://pipenv.pypa.io/en/latest/) for managing dependencies and virtual environments and it must be installed before you proceed.
+
+To install the runtime dependencies, run
+```
+pipenv sync 
+```
+To install development dependencies as well, run
+```
+pipenv sync --dev
+```
+
+To run the app in development mode, use
+```
+pipenv run start
+```
+
+To build the redistributable binaries for the app, run
+```
+pipenv run build-platform
+```
+where `platform` is one of `linux-x86_64`, `linux-aarch64`, `macos-x86_64`, or `macos-arm64`.
+
+The build results will be placed in the `dist` directory.
+
 ## Frontends
 
-This software serves as a backend and should be combined with a frontend for user interaction (https://github.com/IMAGINARY/expressiveness-ui)
-which is embedded in this repository as a submodule in the folder `web-ui`.
+This software serves as a backend and should be combined with a [frontend for user interaction](https://github.com/IMAGINARY/con-espressione-ui).
 
 ## Funding
 
