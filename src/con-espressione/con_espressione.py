@@ -3,6 +3,7 @@
 """
 import argparse
 import logging
+
 import mido
 import json
 import numpy as np
@@ -27,6 +28,7 @@ def read_np_array(posix_path):
         return np.loadtxt(f)
 
 def load_internal_song(id):
+    logging.info(f'Loading composition: {id}')
     # Import song data from internal files relative to this module
 
     traversable_resource_files = resource_files(bm_files)
@@ -45,8 +47,11 @@ def load_internal_song(id):
 
 class LeapControl():
     def __init__(self, songs):
-        self.midi_outport = mido.open_output('con-espressione', virtual=True)
-        self.midi_inport = mido.open_input('con-espressione', virtual=True)
+        midi_port_name = 'con-espressione'
+        logging.info('Opening virtual MIDI output port: {}'.format(midi_port_name))
+        self.midi_outport = mido.open_output(midi_port_name, virtual=True)
+        logging.info('Opening virtual MIDI input port: {}'.format(midi_port_name))
+        self.midi_inport = mido.open_input(midi_port_name, virtual=True)
 
         self.songs = songs
         self.cur_song_id = 0
@@ -66,14 +71,20 @@ class LeapControl():
 
         song_id = int(val)
 
-        if val < len(self.songs):
+        logging.info(f'Selecting composition {song_id}')
+
+        if 0 <= val < len(self.songs):
             self.cur_song_id = song_id
             self.cur_song = self.songs[song_id]
+        else:
+            logging.warning(f'Invalid composition ID: {val}. Composition unchanged.')
 
     def play(self):
         # terminate playback thread if running
         if self.playback_thread is not None:
             self.stop()
+
+        logging.info(f'Starting playback of composition {self.cur_song_id}')
 
         # init playback thread
         cur_config = self.cur_song['config']
@@ -98,6 +109,7 @@ class LeapControl():
 
     def stop(self):
         if self.playback_thread is not None:
+            logging.info('Stopping playback')
             self.playback_thread.stop_playing()
             self.playback_thread.join()
 
@@ -141,7 +153,6 @@ class LeapControl():
     def parse_midi_msg(self, msg):
         if msg.type == 'song_select':
             # select song
-            logging.debug('Received Song change. New value: {}'.format(msg.song))
             self.select_song(int(msg.song))
         if msg.type == 'control_change':
             if msg.channel == 0:
@@ -156,20 +167,18 @@ class LeapControl():
                     self.set_ml_scaler(float(msg.value))
                 if msg.control == 24:
                     # start playing
-                    logging.debug('Received Play command. New value: {}'.format(msg.value))
                     if int(msg.value) == 127:
                         self.play()
                 if msg.control == 25:
                     # stop playing
-                    logging.debug('Received Stop command. New value: {}'.format(msg.value))
                     if int(msg.value) == 127:
                         self.stop()
 
 
 def main():
+    logging.info('Staring con-espressione backend.')
     songs = list(map(load_internal_song, SONG_LIST))
 
-    # instantiate LeapControl
     lc = LeapControl(songs)
 
     try:
@@ -177,10 +186,9 @@ def main():
         for msg in lc.midi_inport:
             lc.parse_midi_msg(msg)
     except AttributeError as e:
-        print('Received unrecognized MIDI message.')
-        print(e)
+        logging.warning('Received unrecognized MIDI message: {} {}'.format(msg, e))
     except KeyboardInterrupt:
-        print('Received keyboard interrupt. Shutting down...')
+        logging.info('Received keyboard interrupt. Shutting down.')
     finally:
         # clean-up
         lc.stop()
@@ -189,15 +197,17 @@ def main():
         lc.midi_outport.close()
         lc.midi_inport.close()
 
+    logging.info('Exiting con-espressione backend.')
+
 
 def main_cli():
-    parser = argparse.ArgumentParser(description='Backend for BM-Application.')
-    parser.add_argument('--verbose', help='Print Debug logs.', action='store_true')
+    parser = argparse.ArgumentParser(prog='con-espressione', description='Backend for Con-Espressione!')
+    parser.add_argument('--verbose', '-v', help='Increase verbosity. Can be specified multiply times.', action='count', default=0)
     args = parser.parse_args()
 
     # set logging level
-    if args.verbose:
-        logging.basicConfig(level=logging.DEBUG)
+    log_levels = [logging.WARNING, logging.INFO, logging.DEBUG]
+    logging.basicConfig(level=log_levels[min(args.verbose, len(log_levels) - 1)])
 
     # start backend
     main()
